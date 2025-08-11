@@ -84,12 +84,20 @@ L'agente inizierà a scansionare Vinted e a inviare notifiche al tuo canale Tele
 ## 📂 Struttura del Progetto
 ```
 deal-finder/
+|__ .env              # secrets
 ├── config.py         # Configurazioni e chiavi API
 ├── requirements.txt  # Dipendenze Python
 ├── scraper.py        # Logica per lo scraping di Vinted
 ├── analyzer.py       # Logica per l'analisi con OpenAI
 ├── notifier.py       # Logica per le notifiche Telegram
 └── main.py           # Script principale che orchestra il tutto
+```
+
+## SECRETS .env
+```
+TELEGRAM_TOKEN = "insert-your-telegram-bot-token"
+TELEGRAM_CHAT_ID = "insert-your-telegram-chat-id"
+OPENAI_KEY = "insert-your-openai-key"
 ```
 
 ## ⚠️ Disclaimer
