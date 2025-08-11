@@ -2,12 +2,7 @@ import sys
 import asyncio  # -> Importa la libreria asyncio
 from telegram import Bot
 from telegram.error import TelegramError
-
-# --- INSERISCI QUI LE TUE CREDENZIALI ---
-# Copia e incolla gli stessi valori che hai inserito in config.py
-TELEGRAM_TOKEN = "8237781386:AAHUPoO31Up55iO-dHABpN-VM9VeNAh0GHE"
-TELEGRAM_CHAT_ID = "11077371"
-# -----------------------------------------
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
 
 async def test_telegram_message():  # -> Rendi la funzione "async"
     """
