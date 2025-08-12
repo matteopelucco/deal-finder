@@ -25,4 +25,4 @@ SEARCH_TERMS = [
 ]
 # Intervallo di attesa tra una scansione completa e l'altra (in secondi)
 # 1800 secondi = 30 minuti
-WAIT_TIME_SECONDS = 1800
+WAIT_TIME_SECONDS = 60

@@ -11,6 +11,7 @@ def analizza_testo_ai(titolo: str) -> str:
         f"Valuta questo annuncio di monete: '{titolo}'. "
         "È un potenziale affare per un collezionista? Indica se sembra un lotto da non esperto "
         "(es. 'eredità', 'monete nonno') o una vendita mirata. Sii sintetico e diretto."
+        "Sii estremamente sintetico, rispondi in massimo 50 parole."
     )
     try:
         # -> La sintassi ora è client.chat.completions.create(...)
@@ -39,6 +40,7 @@ def analizza_immagine_ai(img_url: str) -> str:
         "Cerca elementi di valore: monete d'argento (aspetto lucido/opaco tipico), "
         "2 euro commemorativi rari, monete del Regno d'Italia o pezzi antichi. "
         "Se l'immagine è troppo sfocata o inutile, dillo chiaramente."
+        "Sii estremamente sintetico, rispondi in massimo 50 parole."
     )
     
     try:
