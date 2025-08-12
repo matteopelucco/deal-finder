@@ -3,7 +3,7 @@ from scraper import scrap_vinted
 
 # Definiamo un termine di ricerca standard per il test.
 # Puoi cambiarlo per testare altre parole chiave.
-TEST_TERM = "lotto monete"
+TEST_TERM = "monete antiche"
 
 def test_scraping_functionality():
     """

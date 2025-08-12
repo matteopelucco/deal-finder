@@ -34,5 +34,5 @@ def scrap_vinted(term: str) -> list:
         
         if href: # Aggiungi solo se c'è un link all'annuncio
             results.append({"term": term, "title": title, "link": href, "img_url": img_url})
-            
+    print(f"..{len(results)} results found.")        
     return results
