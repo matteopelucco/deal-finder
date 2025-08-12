@@ -1,3 +1,4 @@
+import pprint  # -> Importiamo la libreria Pretty-Printer
 from openai import OpenAI # -> Importa la classe OpenAI
 from config import OPENAI_KEY
 
@@ -10,20 +11,23 @@ def analizza_testo_ai(titolo: str) -> str:
     prompt = (
         f"Valuta questo annuncio di monete: '{titolo}'. "
         "È un potenziale affare per un collezionista? Indica se sembra un lotto da non esperto "
-        "(es. 'eredità', 'monete nonno') o una vendita mirata. Sii sintetico e diretto."
-        "Sii estremamente sintetico, rispondi in massimo 50 parole."
+        "(es. 'eredità', 'monete nonno') o una vendita mirata."
+        "Sii estremamente sintetico e diretto, rispondi in massimo 50 parole."
     )
     try:
         # -> La sintassi ora è client.chat.completions.create(...)
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": "Sei un esperto numismatico che scova affari online."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=100,
-            temperature=0.3
+            max_completion_tokens=1000
         )
+
+        pp = pprint.PrettyPrinter(indent=2)
+        pp.pprint(response) # Stampa formattata 
+
         return response.choices[0].message.content.strip()
     except Exception as e:
         # Restituisce l'errore in un formato leggibile
@@ -46,7 +50,7 @@ def analizza_immagine_ai(img_url: str) -> str:
     try:
         # -> Anche qui, la sintassi è stata aggiornata
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5-mini",
             messages=[
                 {
                     "role": "user",
@@ -61,7 +65,7 @@ def analizza_immagine_ai(img_url: str) -> str:
                     ],
                 }
             ],
-            max_tokens=150
+            max_completion_tokens=450
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
