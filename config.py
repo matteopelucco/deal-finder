@@ -11,7 +11,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
 
 # Lista delle ricerche da effettuare su Vinted
-SEARCH_TERMS = [
+SEARCH_TERMS_1 = [
     "monete eredità",
     "vecchie monete",
     "monete nonno",
@@ -23,6 +23,20 @@ SEARCH_TERMS = [
     "monete Regno d’Italia",
     "vecchie lire"
 ]
+
+SEARCH_TERMS = [
+    "monete eredità"
+]
 # Intervallo di attesa tra una scansione completa e l'altra (in secondi)
 # 1800 secondi = 30 minuti
-WAIT_TIME_SECONDS = 60
+INTERVALLO_ORARIO = 3600
+
+# Numero massimo di annunci da considerare per ogni termine di ricerca ad ogni ciclo.
+# Limita il numero di risultati presi dallo scraper per l'analisi.
+MAX_ANNUNCI_DA_CONSIDERARE = 10
+
+# Numero massimo di file da conservare nella memoria persistita
+MAX_HISTORY_SIZE = 400  # -> Dimensione massima della nostra cronologia
+
+# Categoria
+VINTED_CATALOG = "4895"

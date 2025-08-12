@@ -1,4 +1,3 @@
-import pprint  # -> Importiamo la libreria Pretty-Printer
 from openai import OpenAI # -> Importa la classe OpenAI
 from config import OPENAI_KEY
 
@@ -6,10 +5,12 @@ from config import OPENAI_KEY
 # La chiave API viene passata qui (o può essere letta automaticamente dalle variabili d'ambiente)
 client = OpenAI(api_key=OPENAI_KEY)
 
-def analizza_testo_ai(titolo: str) -> str:
-    """Analizza il titolo dell'annuncio con l'AI per una valutazione testuale."""
+def analizza_testo_ai(titolo: str, descrizione) -> str:
+    """Analizza titolo e descrizione di un annuncio per una valutazione completa."""
+
     prompt = (
         f"Valuta questo annuncio di monete: '{titolo}'. "
+        f"Descrizione: '{descrizione}'.\n\n"
         "È un potenziale affare per un collezionista? Indica se sembra un lotto da non esperto "
         "(es. 'eredità', 'monete nonno') o una vendita mirata."
         "Sii estremamente sintetico e diretto, rispondi in massimo 50 parole."
@@ -25,8 +26,7 @@ def analizza_testo_ai(titolo: str) -> str:
             max_completion_tokens=1000
         )
 
-        pp = pprint.PrettyPrinter(indent=2)
-        pp.pprint(response) # Stampa formattata 
+        print(f"DEBUG USO TESTO: Prompt={response.usage.prompt_tokens}, Completion={response.usage.completion_tokens}")
 
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -65,8 +65,11 @@ def analizza_immagine_ai(img_url: str) -> str:
                     ],
                 }
             ],
-            max_completion_tokens=450
+            max_completion_tokens=1000
         )
+
+        print(f"DEBUG USO TESTO: Prompt={response.usage.prompt_tokens}, Completion={response.usage.completion_tokens}")
+
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"Errore API OpenAI (vision): {e}"
