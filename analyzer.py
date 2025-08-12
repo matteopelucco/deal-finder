@@ -1,7 +1,10 @@
-import openai
-import requests
+from openai import OpenAI # -> Importa la classe OpenAI
 from config import OPENAI_KEY
-openai.api_key = OPENAI_KEY
+
+# -> Crea un'istanza del "client" OpenAI, che gestirà tutte le chiamate API
+# La chiave API viene passata qui (o può essere letta automaticamente dalle variabili d'ambiente)
+client = OpenAI(api_key=OPENAI_KEY)
+
 def analizza_testo_ai(titolo: str) -> str:
     """Analizza il titolo dell'annuncio con l'AI per una valutazione testuale."""
     prompt = (
@@ -10,7 +13,8 @@ def analizza_testo_ai(titolo: str) -> str:
         "(es. 'eredità', 'monete nonno') o una vendita mirata. Sii sintetico e diretto."
     )
     try:
-        response = openai.ChatCompletion.create(
+        # -> La sintassi ora è client.chat.completions.create(...)
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "Sei un esperto numismatico che scova affari online."},
@@ -19,9 +23,12 @@ def analizza_testo_ai(titolo: str) -> str:
             max_tokens=100,
             temperature=0.3
         )
-        return response.choices[0].message['content'].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
+        # Restituisce l'errore in un formato leggibile
         return f"Errore API OpenAI (testo): {e}"
+
+
 def analizza_immagine_ai(img_url: str) -> str:
     """Analizza l'immagine dell'annuncio con l'AI per una valutazione visiva."""
     if not img_url:
@@ -35,7 +42,8 @@ def analizza_immagine_ai(img_url: str) -> str:
     )
     
     try:
-        response = openai.ChatCompletion.create(
+        # -> Anche qui, la sintassi è stata aggiornata
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
@@ -53,6 +61,6 @@ def analizza_immagine_ai(img_url: str) -> str:
             ],
             max_tokens=150
         )
-        return response.choices[0].message['content'].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         return f"Errore API OpenAI (vision): {e}"
