@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin  # -> Importato urljoin per la gestione sicura degli URL
 
-from config import VINTED_CATALOG
+from config import VINTED_CATALOG, SCRAPER_TIMEOUT_SECONDS
 
 def scrap_vinted(term: str) -> list:
     """
@@ -20,7 +20,7 @@ def scrap_vinted(term: str) -> list:
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
 
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=SCRAPER_TIMEOUT_SECONDS)
         response.raise_for_status()
     except requests.RequestException as e:
         print(f"Errore durante la richiesta a Vinted: {e}")
@@ -73,7 +73,7 @@ def scrap_dettagli_annuncio(url_annuncio: str) -> str:
     print(f"url annuncio: {url_annuncio}")
 
     try:
-        response = requests.get(url_annuncio, headers=headers, timeout=10)
+        response = requests.get(url_annuncio, headers=headers, timeout=SCRAPER_TIMEOUT_SECONDS)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         
