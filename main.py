@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import os
 from collections import deque
+import json
 
 from config import SEARCH_TERMS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_ORARIO, INTERVALLO_INTRA_TERMS, INTERVALLO_INTRA_ARTICLES
 from scraper import scrap_vinted, scrap_dettagli_annuncio
@@ -58,10 +59,39 @@ async def main_loop():
                     print(f"Nuovo annuncio! Analizzo: {annuncio['title']}")
                     descrizione = scrap_dettagli_annuncio(link)
                     
-                    # Ora le funzioni restituiscono un dizionario
-                    analisi_testo = analizza_testo_ai(annuncio['title'], descrizione)
-                    analisi_immagine = analizza_immagine_ai(annuncio['img_url'])
+                    # ==============================================================================
+                    # --- BLOCCO DI LOGGING (INPUT AI) ---
+                    # ==============================================================================
+                    print("\n" + "="*25 + " DEBUG: INPUT PER OPENAI " + "="*25)
+                    print(f"  - Titolo: {annuncio['title']}")
+                    print(f"  - Prezzo: {annuncio['price']:.2f} €")
+                    # Tronchiamo la descrizione nel log per non inondare il terminale
+                    print(f"  - Descrizione: {descrizione[:200]}...") 
+                    print(f"  - Img URL: {annuncio['img_url']}")
+                    print("="*75)
+                    # ==============================================================================
                     
+
+                    analisi_testo = analizza_testo_ai(
+                        annuncio['title'], 
+                        descrizione, 
+                        annuncio['price']
+                    )
+
+                    analisi_immagine = analizza_immagine_ai(annuncio['img_url'])
+                   
+                    # ==============================================================================
+                    # --- BLOCCO DI LOGGING (OUTPUT AI) ---
+                    # ==============================================================================
+                    print("\n" + "*"*25 + " DEBUG: OUTPUT DA OPENAI " + "*"*25)
+                    print("--- Analisi Testo (JSON):")
+                    # Usiamo json.dumps per stampare il dizionario in modo formattato e leggibile
+                    print(json.dumps(analisi_testo, indent=2, ensure_ascii=False))
+                    print("\n--- Analisi Immagine (JSON):")
+                    print(json.dumps(analisi_immagine, indent=2, ensure_ascii=False))
+                    print("*"*74 + "\n")
+                    # ==============================================================================
+
                     # L'annuncio viene registrato come analizzato, a prescindere dal risultato
                     annunci_gia_analizzati_set.add(link)
                     cronologia_deque.append(link)
@@ -70,13 +100,12 @@ async def main_loop():
                     # --- LOGICA DECISIONALE PER LE NOTIFICHE ---
                     # Inviamo una notifica solo se ALMENO UNA delle due analisi è interessante
                     if analisi_testo.get('is_interessante', False) or analisi_immagine.get('is_interessante', False):
-                        
-                        print(f"✅ Annuncio INTERESSANTE trovato! Punteggi (T/I): {analisi_testo.get('punteggio', 0)}/{analisi_immagine.get('punteggio', 0)}. Invio notifica...")
-
-                        # Costruiamo un messaggio più ricco con i nuovi dati strutturati
+                        print(f"✅ Annuncio INTERESSANTE trovato!...")
+                        # -> AGGIORNATO IL MESSAGGIO per includere il prezzo
                         messaggio = (
                             f"🔥 *Potenziale Affare Trovato!* 🔥 (Ricerca: '{term}')\n\n"
-                            f"📝 *Titolo*: {annuncio['title']}\n\n"
+                            f"📝 *Titolo*: {annuncio['title']}\n"
+                            f"💰 *Prezzo*: *{annuncio['price']:.2f} €*\n\n" # Aggiunto il prezzo
                             f"🤖 *Valutazione Testo (Score: {analisi_testo.get('punteggio', 0)}/10)*:\n"
                             f"{analisi_testo.get('motivazione', 'N/A')}\n"
                             f"*Parole chiave*: {', '.join(analisi_testo.get('parole_chiave', []))}\n\n"

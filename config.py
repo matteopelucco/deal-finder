@@ -38,10 +38,10 @@ MAX_HISTORY_SIZE = 400  # -> Dimensione massima della nostra cronologia
 VINTED_CATALOG = "4895"
 
 # Timeout in secondi per le richieste web dello scraper.
-SCRAPER_TIMEOUT_SECONDS = 30
+SCRAPER_TIMEOUT_SECONDS = 20
 
 # Intervallo tra un termine di ricerca e il seguente
-INTERVALLO_INTRA_TERMS = 30
+INTERVALLO_INTRA_TERMS = 15
 
 # Intervallo tra una scansione di un annuncio e la seguente
 INTERVALLO_INTRA_ARTICLES = 15
