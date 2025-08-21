@@ -6,7 +6,7 @@ import json
 
 from config import SEARCH_TERMS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_ORARIO, INTERVALLO_INTRA_TERMS, INTERVALLO_INTRA_ARTICLES
 from scraper import scrap_vinted, scrap_dettagli_annuncio
-from analyzer import analizza_testo_ai, analizza_immagine_ai
+from analyzer import analizza_annuncio_completo
 from notifier import invia_notifica
 
 # --- (Le funzioni di gestione della cronologia rimangono invariate) ---
@@ -26,12 +26,12 @@ def salva_cronologia(cronologia_deque: deque):
         f.write('\n'.join(cronologia_deque))
 
 async def main_loop():
-    """Ciclo principale con filtro intelligente delle notifiche."""
+    """Ciclo principale con analisi olistica e filtro intelligente."""
     
     annunci_gia_analizzati_set, cronologia_deque = carica_cronologia()
     print(f"Caricati {len(annunci_gia_analizzati_set)} annunci dalla cronologia (capienza massima: {MAX_HISTORY_SIZE}).")
-
     while True:
+
         ora_corrente = datetime.datetime.now().hour
         
         # Corretta la logica per la pausa notturna (attivo dalle 7:00 alle 23:00)
@@ -56,7 +56,7 @@ async def main_loop():
                     if link in annunci_gia_analizzati_set:
                         continue
 
-                    print(f"Nuovo annuncio! Analizzo: {annuncio['title']}")
+                    print(f"Nuovo annuncio! Eseguo analisi olistica per: {annuncio['title']}")
                     descrizione = scrap_dettagli_annuncio(link)
                     
                     # ==============================================================================
@@ -70,25 +70,22 @@ async def main_loop():
                     print(f"  - Img URL: {annuncio['img_url']}")
                     print("="*75)
                     # ==============================================================================
-                    
 
-                    analisi_testo = analizza_testo_ai(
+                    # --- CHIAMATA UNIFICATA ALL'ANALISI ---
+                    analisi_complessiva = analizza_annuncio_completo(
                         annuncio['title'], 
                         descrizione, 
-                        annuncio['price']
+                        annuncio['price'],
+                        annuncio['img_url']
                     )
-
-                    analisi_immagine = analizza_immagine_ai(annuncio['img_url'])
                    
                     # ==============================================================================
                     # --- BLOCCO DI LOGGING (OUTPUT AI) ---
                     # ==============================================================================
                     print("\n" + "*"*25 + " DEBUG: OUTPUT DA OPENAI " + "*"*25)
-                    print("--- Analisi Testo (JSON):")
+                    print("--- Analisi Complessiva (JSON):")
                     # Usiamo json.dumps per stampare il dizionario in modo formattato e leggibile
-                    print(json.dumps(analisi_testo, indent=2, ensure_ascii=False))
-                    print("\n--- Analisi Immagine (JSON):")
-                    print(json.dumps(analisi_immagine, indent=2, ensure_ascii=False))
+                    print(json.dumps(analisi_complessiva, indent=2, ensure_ascii=False))
                     print("*"*74 + "\n")
                     # ==============================================================================
 
@@ -99,26 +96,25 @@ async def main_loop():
 
                     # --- LOGICA DECISIONALE PER LE NOTIFICHE ---
                     # Inviamo una notifica solo se ALMENO UNA delle due analisi è interessante
-                    if analisi_testo.get('is_interessante', False) or analisi_immagine.get('is_interessante', False):
-                        print(f"✅ Annuncio INTERESSANTE trovato!...")
-                        # -> AGGIORNATO IL MESSAGGIO per includere il prezzo
+                    if analisi_complessiva.get('is_interessante', False):
+                    
+                        punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
+                        print(f"✅ Annuncio INTERESSANTE trovato! Punteggio Complessivo: {punteggio}/10. Invio notifica...")
+                        # --- MESSAGGIO UNIFICATO ---
                         messaggio = (
                             f"🔥 *Potenziale Affare Trovato!* 🔥 (Ricerca: '{term}')\n\n"
                             f"📝 *Titolo*: {annuncio['title']}\n"
-                            f"💰 *Prezzo*: *{annuncio['price']:.2f} €*\n\n" # Aggiunto il prezzo
-                            f"🤖 *Valutazione Testo (Score: {analisi_testo.get('punteggio', 0)}/10)*:\n"
-                            f"{analisi_testo.get('motivazione', 'N/A')}\n"
-                            f"*Parole chiave*: {', '.join(analisi_testo.get('parole_chiave', []))}\n\n"
-                            f"🖼️ *Valutazione Immagine (Score: {analisi_immagine.get('punteggio', 0)}/10)*:\n"
-                            f"{analisi_immagine.get('motivazione', 'N/A')}\n"
-                            f"*Parole chiave*: {', '.join(analisi_immagine.get('parole_chiave', []))}"
+                            f"💰 *Prezzo*: *{annuncio['price']:.2f} €*\n\n"
+                            f"🤖 *Valutazione Complessiva (Score: {punteggio}/10)*:\n"
+                            f"{analisi_complessiva.get('motivazione_complessiva', 'N/A')}\n"
+                            f"*Parole chiave*: {', '.join(analisi_complessiva.get('parole_chiave', []))}"
                         )
                         
                         await invia_notifica(messaggio, link, annuncio['img_url'])
                     
                     else:
-                        # Se l'annuncio non è interessante, lo registriamo solo nel log
-                        print(f"❌ Annuncio scartato. Punteggi (T/I): {analisi_testo.get('punteggio', 0)}/{analisi_immagine.get('punteggio', 0)}.")
+                        punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
+                        print(f"❌ Annuncio scartato. Punteggio Complessivo: {punteggio}/10.")
 
                     # Pausa tra un'analisi e l'altra per essere più gentili con le API
                     await asyncio.sleep(INTERVALLO_INTRA_ARTICLES) 
