@@ -54,13 +54,14 @@ PREZZO_MASSIMO_DA_CONSIDERARE = 120.0
 # Ogni dizionario in questa lista rappresenta un "target" che il bot cercherà.
 # Per aggiungere un nuovo tipo di affare (es. borse, videogiochi), basta
 # aggiungere un nuovo dizionario qui, senza toccare il codice principale.
+
 SEARCH_TARGETS = [
     {
         "expertise_name": "Numismatica", # Nome identificativo per il log
         "vinted_catalog_id": 4895,
         "min_price_to_consider": 2.0,
         "max_price_to_consider": 150.0,
-        "search_terms": [ # -> Ora è una lista
+        "search_terms": [ 
             "monete argento",
             "vecchie monete",
             "monete nonno",
@@ -74,14 +75,15 @@ SEARCH_TARGETS = [
 
         ],
         "ai_context_prompt": """
-            Sei un esperto numismatico molto critico e selettivo.
-            --- REGOLE DI VALUTAZIONE (MONETE) ---
-            1.  Confronta il prezzo con il valore di mercato. Un lotto con argento a basso costo è un affare.
-            2.  Valori di riferimento: Lira comune = 0.10€, Moneta argento = 5-15€, 2€ comm. = 3€.
-            3.  Indicatori di affare: parole come "eredità", "nonno", "cantina", "non me ne intendo".
-            --- CRITERI DI PUNTEGGIO (MONETE) ---
-            -   Punteggio 8-10 (Affare Imperdibile): Prezzo palesemente basso per un lotto con argento o monete antiche, da venditore non esperto.
-            -   Punteggio 1-4 (Da Scartare): Prezzo alto, singole monete comuni.
+            Sei un esperto numismatico incredibilmente scettico. La tua reputazione dipende dal non segnalare mai un annuncio che non sia un vero affare. Il tuo obiettivo è proteggermi da perdite di tempo.
+            --- PROTOCOLLO ANTI-TRUFFA E DI VALUTAZIONE ---
+            1.  **Priorità Assoluta**: Identificare venditori non esperti è la chiave per un vero affare. Cerca parole come "eredità", "cantina", "nonno", "non me ne intendo". La presenza di queste parole, combinata con un prezzo basso, è il segnale più forte.
+            2.  **Valutazione Critica del Prezzo**: Confronta il prezzo con i valori di riferimento (Lira comune: 0.10€, Argento: 5-15€). Un "lotto" a 10€ deve contenere decine di monete o almeno un pezzo d'argento per essere interessante. Sii spietato nel giudizio.
+            3.  **Analisi Immagine**: L'immagine DEVE confermare la descrizione. Se il testo parla di "lotto" e la foto mostra una sola moneta, è un segnale di allarme. Foto sfocate o che non mostrano tutte le monete sono un fattore negativo.
+            --- CRITERI DI PUNTEGGIO (MOLTO RESTRITTIVI) ---
+            -   **Punteggio 9-10 (Affare Eccezionale)**: DEVONO essere presenti tutti e tre gli elementi: 1) Prezzo palesemente basso per la quantità/qualità descritta, 2) Testo che indica un venditore non esperto, 3) Immagine che conferma la promessa.
+            -   **Punteggio 7-8 (Affare Probabile)**: Due dei tre elementi sopra sono presenti. Es: prezzo e testo ottimi, ma foto mediocre. Vale la pena un'occhiata.
+            -   **Punteggio 1-6 (Da Scartare)**: Tutti gli altri casi. Se anche un solo elemento è palesemente negativo (es. prezzo troppo alto), il punteggio deve essere basso.
         """
     },
     {
@@ -89,21 +91,22 @@ SEARCH_TARGETS = [
         "vinted_catalog_id": 699,
         "min_price_to_consider": 5.0,
         "max_price_to_consider": 200.0,
-        "search_terms": [ # -> Ora è una lista
+        "search_terms": [
             "omega speedmaster", 
-            "omega seamaster"
+            "omega seamaster", 
+            "vintage casio"
         ],
         "ai_context_prompt": """
-            Sei un esperto di orologi di lusso, specializzato in Omega, molto attento alle truffe.
-            --- REGOLE DI VALUTAZIONE (OROLOGI OMEGA) ---
-            1.  La priorità è l'AUTENTICITÀ. Un prezzo troppo basso (< 1500€) è un enorme segnale di allarme per un falso.
-            2.  Valore di mercato di riferimento: uno Speedmaster usato parte da 2500-3000€ e sale.
-            3.  Indicatori di autenticità: parole come "corredo completo", "scatola e garanzia", "acquistato da concessionario".
-            4.  Indicatori di rischio: "nessuna scatola", "regalo non gradito", descrizioni vaghe.
-            --- CRITERI DI PUNTEGGIO (OROLOGI OMEGA) ---
-            -   Punteggio 8-10 (Affare Potenziale): Prezzo competitivo (es. 2000-3000€) CON corredo completo e storia credibile.
-            -   Punteggio 5-7 (Da Verificare): Prezzo interessante ma senza corredo. Rischio più alto.
-            -   Punteggio 1-4 (Da Scartare): Prezzo irrealisticamente basso (probabile truffa) o troppo alto.
+            Sei un esperto di orologi di lusso, paranoico riguardo ai falsi. La tua reputazione dipende dal non farmi MAI visionare un falso o una truffa. Il tuo obiettivo è proteggere il mio investimento.
+            --- PROTOCOLLO ANTI-TRUFFA E RILEVAMENTO FALSI (OBBLIGATORIO) ---
+            1.  **Red Flag #1: Prezzo Irrealistico**. Un Omega Speedmaster/Seamaster a meno di 1500€ è un FALSO al 99.9%. Scartalo immediatamente con punteggio 1, a meno che non ci sia una motivazione INCREDIBILMENTE plausibile (es. "danneggiato per parti di ricambio").
+            2.  **Green Flag: Il Corredo Completo**. La presenza di "scatola e garanzia", "full set", "corredo completo" è il segnale di fiducia più forte. Aumenta drasticamente il punteggio.
+            3.  **Analisi del Venditore (dal testo)**: Descrizioni come "regalo non gradito", "non so nulla" sono segnali di rischio altissimo. Descrizioni dettagliate e sicure sono positive.
+            4.  **Analisi Immagine**: Esigi foto chiare. Il quadrante, il fondello e la chiusura devono essere visibili. Foto stock o prese da internet sono un segnale di truffa.
+            --- CRITERI DI PUNTEGGIO (MOLTO RESTRITTIVI) ---
+            -   **Punteggio 9-10 (Da Controllare Subito)**: Prezzo competitivo (es. 2000-4000€) E menzione esplicita di "corredo completo" o "garanzia".
+            -   **Punteggio 7-8 (Potenzialmente Interessante)**: Prezzo realistico e storia credibile, anche senza corredo. L'immagine deve essere chiara e convincente.
+            -   **Punteggio 1-6 (Da Scartare)**: Tutti gli altri casi, specialmente se il prezzo è troppo basso o se mancano dettagli cruciali.
         """
     }
 ]

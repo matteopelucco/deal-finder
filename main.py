@@ -52,7 +52,7 @@ async def main_loop():
         ora_corrente = datetime.datetime.now().hour
         
         # Il bot è attivo solo in questa finestra oraria
-        if 7 <= ora_corrente <= 23:
+        if 7 <= ora_corrente <= 25:
             print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Orario di attività. Inizio nuova scansione...")
             
             # --- CICLO ESTERNO SUI CAMPI DI EXPERTISE ---

@@ -99,7 +99,7 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
             "link": full_link,
             "price": price_float,
             "img_url": img_url,
-            "url": url
+            "url": full_link
         })
 
     return results
