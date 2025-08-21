@@ -45,3 +45,7 @@ INTERVALLO_INTRA_TERMS = 15
 
 # Intervallo tra una scansione di un annuncio e la seguente
 INTERVALLO_INTRA_ARTICLES = 15
+
+# Salta l'analisi per tutti gli annunci con un prezzo uguale o inferiore a questo valore.
+# Utile per scartare annunci con prezzi placeholder (es. 1€).
+PREZZO_MINIMO_DA_CONSIDERARE = 1.0

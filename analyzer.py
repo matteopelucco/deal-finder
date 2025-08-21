@@ -43,6 +43,9 @@ def analizza_annuncio_completo(titolo: str, descrizione: str, prezzo: float, img
     -   Punteggio 5-7 (Potenzialmente Interessante): Indicatori contrastanti. Es: testo ottimo ma foto brutta, o viceversa. Vale la pena approfondire.
     -   Punteggio 1-4 (Da Scartare): Annuncio debole. Prezzo alto, descrizione scarsa o foto inutile. La maggior parte degli annunci rientrerà qui.
 
+    --- IS INTERESSANTE
+    -   True se il punteggio è tra 7 e 10, compresi. False negli altri casi.
+
     --- DATI DELL'ANNUNCIO DA ANALIZZARE ---
     - Titolo: "{titolo}"
     - Descrizione: "{descrizione}"

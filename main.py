@@ -4,7 +4,7 @@ import os
 from collections import deque
 import json
 
-from config import SEARCH_TERMS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_ORARIO, INTERVALLO_INTRA_TERMS, INTERVALLO_INTRA_ARTICLES
+from config import SEARCH_TERMS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_ORARIO, INTERVALLO_INTRA_TERMS, INTERVALLO_INTRA_ARTICLES, PREZZO_MINIMO_DA_CONSIDERARE
 from scraper import scrap_vinted, scrap_dettagli_annuncio
 from analyzer import analizza_annuncio_completo
 from notifier import invia_notifica
@@ -55,6 +55,13 @@ async def main_loop():
                     link = annuncio['link']
                     if link in annunci_gia_analizzati_set:
                         continue
+
+                    # --- FILTRO PREZZO MINIMO ---
+                    # Se il prezzo è uguale o inferiore alla soglia, salta l'annuncio e vai al prossimo.
+                    # Questo è il primo controllo per massimizzare l'efficienza.
+                    if annuncio['price'] <= PREZZO_MINIMO_DA_CONSIDERARE:
+                        print(f"INFO: Annuncio '{annuncio['title']}' scartato. Prezzo ({annuncio['price']:.2f}€) <= soglia minima ({PREZZO_MINIMO_DA_CONSIDERARE:.2f}€).")
+                        continue # -> Salta al prossimo annuncio
 
                     print(f"Nuovo annuncio! Eseguo analisi olistica per: {annuncio['title']}")
                     descrizione = scrap_dettagli_annuncio(link)

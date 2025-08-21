@@ -44,6 +44,7 @@ def scrap_vinted(term: str) -> list:
     url = f"{base_url}/catalog?search_text={term.replace(' ', '%20')}&catalog[]={VINTED_CATALOG}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
 
+    print(f"Url da chiamare: '{url}'...")
     try:
         response = requests.get(url, headers=headers, timeout=SCRAPER_TIMEOUT_SECONDS)
         response.raise_for_status()
