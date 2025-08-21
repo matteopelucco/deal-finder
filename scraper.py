@@ -2,68 +2,82 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-# -> Importiamo le costanti di configurazione
-from config import VINTED_CATALOG, SCRAPER_TIMEOUT_SECONDS
+# Import delle costanti di configurazione necessarie
+from config import SCRAPER_TIMEOUT_SECONDS
 
 # ==============================================================================
 # --- CONFIGURAZIONE CENTRALE DEI SELETTORI CSS ---
-# Se Vinted cambia il sito, basterà aggiornare i valori in questo dizionario.
+# Se Vinted cambia la struttura del suo sito, basterà aggiornare i valori
+# in questo dizionario per far funzionare di nuovo lo scraper.
 # ==============================================================================
 VINTED_SELECTORS = {
-    # Selettori per la pagina dei risultati di ricerca (catalog)
+    # Selettori per la pagina dei risultati di ricerca (catalogo)
     "search_results": {
-        "item_card": 'div[data-testid="grid-item"]',  # Contenitore di un singolo annuncio
-        "link": "a",                                 # Il tag <a> per il link
-        "image": "img",                              # Il tag <img> per l'immagine
-        "title": '[data-testid$="--description-title"]',  # L'elemento che contiene il titolo
-        "price": '[data-testid$="--price-text"]',           # L'elemento che contiene il prezzo
+        # Selettore per il "contenitore" di un singolo annuncio nella griglia
+        "item_card": 'div[data-testid="grid-item"]',
+        # Selettore per il link all'annuncio (relativo all'item_card)
+        "link": "a",
+        # Selettore per l'immagine dell'annuncio (relativo all'item_card)
+        "image": "img",
+        # Selettore per il titolo. Cerca un data-testid che FINISCE CON "--description-title"
+        "title": '[data-testid$="--description-title"]',
+        # Selettore per il prezzo. Cerca un data-testid che FINISCE CON "--price-text"
+        "price": '[data-testid$="--price-text"]',
     },
     # Selettori per la pagina di dettaglio di un singolo annuncio
     "item_details": {
-        "description": "div[itemprop='description']"  # L'elemento che contiene la descrizione
+        # Selettore per il blocco che contiene la descrizione testuale dell'annuncio
+        "description": "div[itemprop='description']"
     }
 }
 # ==============================================================================
 
 def _clean_price(price_text: str) -> float:
-    """Converte una stringa di prezzo (es. '3,00 €') in un numero float."""
+    """
+    Pulisce una stringa di prezzo (es. '125,00 €') e la converte in un numero float.
+    Gestisce la valuta, gli spazi e la virgola come separatore decimale.
+    """
     if not price_text:
         return 0.0
     try:
+        # Rimuove il simbolo dell'euro, gli spazi, sostituisce la virgola e converte
         cleaned_price = price_text.replace('€', '').replace(',', '.').strip()
         return float(cleaned_price)
     except (ValueError, TypeError):
+        # In caso di errore di conversione, restituisce 0.0 per evitare crash
         return 0.0
 
-def scrap_vinted(term: str) -> list:
+def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
     """
-    Effettua una ricerca su Vinted usando i selettori centralizzati.
+    Esegue una ricerca su Vinted per un dato termine e ID catalogo,
+    usando i selettori centralizzati per estrarre i dati degli annunci.
+    Restituisce una lista di dizionari, ognuno rappresentante un annuncio.
     """
-    print(f"Scraping per il termine: '{term}'...")
     base_url = "https://www.vinted.it"
-    url = f"{base_url}/catalog?search_text={term.replace(' ', '%20')}&catalog[]={VINTED_CATALOG}"
+    # L'URL viene costruito dinamicamente con il termine e l'ID catalogo forniti
+    url = f"{base_url}/catalog?search_text={term.replace(' ', '%20')}&catalog[]={vinted_catalog_id}"
+    # Headers per simulare un browser e ridurre la probabilità di essere bloccati
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
 
-    print(f"Url da chiamare: '{url}'...")
     try:
         response = requests.get(url, headers=headers, timeout=SCRAPER_TIMEOUT_SECONDS)
-        response.raise_for_status()
+        response.raise_for_status()  # Solleva un'eccezione per errori HTTP (es. 403, 404, 500)
     except requests.RequestException as e:
-        print(f"Errore durante la richiesta a Vinted: {e}")
+        print(f"ERRORE durante la richiesta a Vinted per '{term}': {e}")
         return []
 
     soup = BeautifulSoup(response.content, "html.parser")
     results = []
 
-    # -> Usa il selettore centralizzato per trovare tutti gli annunci
+    # Usa il selettore centralizzato per trovare tutti i contenitori degli annunci
     items = soup.select(VINTED_SELECTORS["search_results"]["item_card"])
     
     if not items:
-        print(f"!!! NESSUN ANNUNCIO TROVATO. Il selettore '{VINTED_SELECTORS['search_results']['item_card']}' potrebbe essere cambiato. !!!")
+        print(f"     INFO: Nessun annuncio trovato per '{term}'. Il selettore '{VINTED_SELECTORS['search_results']['item_card']}' potrebbe essere obsoleto o non ci sono risultati.")
         return []
 
     for item in items:
-        # -> Usa i selettori centralizzati per trovare gli elementi interni
+        # Per ogni annuncio, estrae i singoli dati usando i selettori relativi
         link_element = item.find(VINTED_SELECTORS["search_results"]["link"], href=True)
         if not link_element:
             continue
@@ -80,19 +94,19 @@ def scrap_vinted(term: str) -> list:
         price_float = _clean_price(price_str)
 
         results.append({
-            "term": term, 
-            "title": title, 
-            "link": full_link, 
-            "price": price_float, 
-            "img_url": img_url
+            "term": term,
+            "title": title,
+            "link": full_link,
+            "price": price_float,
+            "img_url": img_url,
+            "url": url
         })
 
-    print(f"..{len(results)} results found.")
     return results
 
 def scrap_dettagli_annuncio(url_annuncio: str) -> str:
     """
-    Visita la pagina di un singolo annuncio e ne estrae la descrizione usando i selettori centralizzati.
+    Visita la pagina di un singolo annuncio e ne estrae la descrizione testuale.
     """
     if not url_annuncio:
         return ""
@@ -102,17 +116,17 @@ def scrap_dettagli_annuncio(url_annuncio: str) -> str:
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # -> Usa il selettore centralizzato per la descrizione
+        # Usa il selettore centralizzato per trovare la descrizione
         description_container = soup.select_one(VINTED_SELECTORS["item_details"]["description"])
         
         if description_container:
-            return description_container.get_text(strip=True)
+            return description_container.get_text(strip=True, separator='\n')
         else:
             return "Descrizione non trovata."
             
     except requests.RequestException as e:
-        print(f"Errore di rete visitando {url_annuncio}: {e}")
+        print(f"        ERRORE di rete visitando {url_annuncio}: {e}")
         return "Errore durante il recupero della descrizione."
     except Exception as e:
-        print(f"Errore imprevisto durante lo scraping dei dettagli: {e}")
+        print(f"        ERRORE imprevisto durante lo scraping dei dettagli: {e}")
         return "Errore imprevisto."

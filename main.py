@@ -4,138 +4,144 @@ import os
 from collections import deque
 import json
 
-from config import SEARCH_TERMS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_ORARIO, INTERVALLO_INTRA_TERMS, INTERVALLO_INTRA_ARTICLES, PREZZO_MINIMO_DA_CONSIDERARE, PREZZO_MASSIMO_DA_CONSIDERARE
+# Import delle configurazioni e delle funzioni dai nostri moduli
+from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_ORARIO
 from scraper import scrap_vinted, scrap_dettagli_annuncio
 from analyzer import analizza_annuncio_completo
 from notifier import invia_notifica
 
-# --- (Le funzioni di gestione della cronologia rimangono invariate) ---
+# --- GESTIONE DELLA CRONOLOGIA PERSISTENTE ---
+
 HISTORY_FILE = "analyzed_listings.txt"
 
 def carica_cronologia():
+    """
+    Carica la cronologia degli annunci già analizzati da un file di testo.
+    Usa un set per ricerche veloci O(1) e una deque a dimensione fissa per gestire il limite.
+    """
     if not os.path.exists(HISTORY_FILE):
         return set(), deque(maxlen=MAX_HISTORY_SIZE)
-    with open(HISTORY_FILE, 'r') as f:
-        lines = [line.strip() for line in f.readlines()]
-        cronologia_deque = deque(lines, maxlen=MAX_HISTORY_SIZE)
-        cronologia_set = set(cronologia_deque)
-        return cronologia_set, cronologia_deque
+    try:
+        with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+            lines = [line.strip() for line in f.readlines() if line.strip()]
+            cronologia_deque = deque(lines, maxlen=MAX_HISTORY_SIZE)
+            cronologia_set = set(cronologia_deque)
+            return cronologia_set, cronologia_deque
+    except Exception as e:
+        print(f"ERRORE nel caricamento della cronologia: {e}. Ripartenza con cronologia vuota.")
+        return set(), deque(maxlen=MAX_HISTORY_SIZE)
 
 def salva_cronologia(cronologia_deque: deque):
-    with open(HISTORY_FILE, 'w') as f:
-        f.write('\n'.join(cronologia_deque))
+    """Salva l'intero stato della deque nel file, sovrascrivendolo."""
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(cronologia_deque))
+    except Exception as e:
+        print(f"ERRORE nel salvataggio della cronologia: {e}")
+
 
 async def main_loop():
-    """Ciclo principale con analisi olistica e filtro intelligente."""
-    
+    """
+    Ciclo principale del bot. Gestisce i target di expertise, esegue le ricerche,
+    filtra i risultati, orchestra l'analisi AI e invia le notifiche.
+    """
     annunci_gia_analizzati_set, cronologia_deque = carica_cronologia()
     print(f"Caricati {len(annunci_gia_analizzati_set)} annunci dalla cronologia (capienza massima: {MAX_HISTORY_SIZE}).")
-    while True:
 
+    while True:
         ora_corrente = datetime.datetime.now().hour
         
-        # Corretta la logica per la pausa notturna (attivo dalle 7:00 alle 23:00)
+        # Il bot è attivo solo in questa finestra oraria
         if 7 <= ora_corrente <= 23:
             print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Orario di attività. Inizio nuova scansione...")
             
-            nuovi_annunci_analizzati = False
+            # --- CICLO ESTERNO SUI CAMPI DI EXPERTISE ---
+            for target in SEARCH_TARGETS:
+                expertise_name = target["expertise_name"]
+                catalog_id = target["vinted_catalog_id"]
+                min_price = target["min_price_to_consider"]
+                max_price = target["max_price_to_consider"]
+                ai_context = target["ai_context_prompt"]
+                search_terms = target["search_terms"]
 
-            for i, term in enumerate(SEARCH_TERMS):
+                print(f"\n--- Inizio Scansione Expertise: '{expertise_name}' ---")
 
-                # Attendiamo qualche attimo tra una ricerca e la seguente, per essere gentili con le API.
-                if i > 0:
-                    print(f"Pausa di {INTERVALLO_INTRA_TERMS} secondi prima del prossimo termine di ricerca...")
-                    await asyncio.sleep(INTERVALLO_INTRA_TERMS)
-
-                risultati_scraper = scrap_vinted(term)
-                annunci_da_considerare = risultati_scraper[:MAX_ANNUNCI_DA_CONSIDERARE]
-                print(f"Termine '{term}': {len(risultati_scraper)} trovati, ne considero i primi {len(annunci_da_considerare)}.")
-
-                for annuncio in annunci_da_considerare:
-                    link = annuncio['link']
-                    if link in annunci_gia_analizzati_set:
-                        continue
-
-                    # --- FILTRO PREZZO MINIMO ---
-                    # Se il prezzo è uguale o inferiore alla soglia, salta l'annuncio e vai al prossimo.
-                    # Questo è il primo controllo per massimizzare l'efficienza.
-                    if annuncio['price'] <= PREZZO_MINIMO_DA_CONSIDERARE:
-                        print(f"INFO: Annuncio '{annuncio['title']}' scartato. Prezzo ({annuncio['price']:.2f}€) <= soglia minima ({PREZZO_MINIMO_DA_CONSIDERARE:.2f}€).")
-                        continue # -> Salta al prossimo annuncio
-                    if annuncio['price'] >= PREZZO_MASSIMO_DA_CONSIDERARE:
-                        print(f"INFO: Annuncio '{annuncio['title']}' scartato. Prezzo ({annuncio['price']:.2f}€) >= soglia massima ({PREZZO_MINIMO_DA_CONSIDERARE:.2f}€).")
-                        continue # -> Salta al prossimo annuncio
-
-                    print(f"Nuovo annuncio! Eseguo analisi olistica per: {annuncio['title']}")
-                    descrizione = scrap_dettagli_annuncio(link)
+                # --- CICLO INTERNO SUI TERMINI DI RICERCA DI QUESTA EXPERTISE ---
+                for term in search_terms:
+                    print(f"  -> Ricerca per il termine: '{term}' (Catalogo: {catalog_id})")
                     
-                    # ==============================================================================
-                    # --- BLOCCO DI LOGGING (INPUT AI) ---
-                    # ==============================================================================
-                    print("\n" + "="*25 + " DEBUG: INPUT PER OPENAI " + "="*25)
-                    print(f"  - Titolo: {annuncio['title']}")
-                    print(f"  - Prezzo: {annuncio['price']:.2f} €")
-                    # Tronchiamo la descrizione nel log per non inondare il terminale
-                    print(f"  - Descrizione: {descrizione[:200]}...") 
-                    print(f"  - Img URL: {annuncio['img_url']}")
-                    print("="*75)
-                    # ==============================================================================
+                    risultati_scraper = scrap_vinted(term, catalog_id)
+                    annunci_da_considerare = risultati_scraper[:MAX_ANNUNCI_DA_CONSIDERARE]
+                    print(f"     Trovati {len(risultati_scraper)} annunci, ne considero i primi {len(annunci_da_considerare)}.")
 
-                    # --- CHIAMATA UNIFICATA ALL'ANALISI ---
-                    analisi_complessiva = analizza_annuncio_completo(
-                        annuncio['title'], 
-                        descrizione, 
-                        annuncio['price'],
-                        annuncio['img_url']
-                    )
-                   
-                    # ==============================================================================
-                    # --- BLOCCO DI LOGGING (OUTPUT AI) ---
-                    # ==============================================================================
-                    print("\n" + "*"*25 + " DEBUG: OUTPUT DA OPENAI " + "*"*25)
-                    print("--- Analisi Complessiva (JSON):")
-                    # Usiamo json.dumps per stampare il dizionario in modo formattato e leggibile
-                    print(json.dumps(analisi_complessiva, indent=2, ensure_ascii=False))
-                    print("*"*74 + "\n")
-                    # ==============================================================================
+                    for annuncio in annunci_da_considerare:
+                        # Filtro per prezzo minimo, specifico per questo target
+                        if annuncio['price'] <= min_price :
+                            continue
+                        if annuncio['price'] >= max_price:
+                            continue
 
-                    # L'annuncio viene registrato come analizzato, a prescindere dal risultato
-                    annunci_gia_analizzati_set.add(link)
-                    cronologia_deque.append(link)
-                    nuovi_annunci_analizzati = True
+                        # Filtro per annunci già analizzati in passato
+                        link = annuncio['link']
+                        if link in annunci_gia_analizzati_set:
+                            continue
 
-                    # --- LOGICA DECISIONALE PER LE NOTIFICHE ---
-                    # Inviamo una notifica solo se ALMENO UNA delle due analisi è interessante
-                    if analisi_complessiva.get('is_interessante', False):
-                    
-                        punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
-                        print(f"✅ Annuncio INTERESSANTE trovato! Punteggio Complessivo: {punteggio}/10. Invio notifica...")
-                        # --- MESSAGGIO UNIFICATO ---
-                        messaggio = (
-                            f"🔥 *Potenziale Affare Trovato!* 🔥 (Ricerca: '{term}')\n\n"
-                            f"📝 *Titolo*: {annuncio['title']}\n"
-                            f"💰 *Prezzo*: *{annuncio['price']:.2f} €*\n\n"
-                            f"🤖 *Valutazione Complessiva (Score: {punteggio}/10)*:\n"
-                            f"{analisi_complessiva.get('motivazione_complessiva', 'N/A')}\n"
-                            f"*Parole chiave*: {', '.join(analisi_complessiva.get('parole_chiave', []))}"
-                        )
+                        print(f"        -> Nuovo annuncio! Analizzo: {annuncio['title']}")
+                        descrizione = scrap_dettagli_annuncio(link)
                         
-                        await invia_notifica(messaggio, link, annuncio['img_url'])
-                    
-                    else:
-                        punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
-                        print(f"❌ Annuncio scartato. Punteggio Complessivo: {punteggio}/10.")
+                        # LOGGING DI DEBUG PER INPUT AI
+                        print("\n" + "="*25 + " DEBUG: INPUT PER OPENAI " + "="*25)
+                        print(f"          - Titolo: {annuncio['title']}")
+                        print(f"          - Prezzo: {annuncio['price']:.2f} €")
+                        print(f"          - Descrizione: {descrizione[:200]}...") 
+                        print(f"          - Img URL: {annuncio['img_url']}")
+                        print(f"          - URL: {annuncio['url']}")
+                        print("="*75)
 
-                    # Pausa tra un'analisi e l'altra per essere più gentili con le API
-                    await asyncio.sleep(INTERVALLO_INTRA_ARTICLES) 
+                        # Chiamata unificata alla funzione di analisi olistica
+                        analisi_complessiva = analizza_annuncio_completo(
+                            annuncio['title'], 
+                            descrizione, 
+                            annuncio['price'],
+                            annuncio['img_url'],
+                            ai_context
+                        )
 
-                await asyncio.sleep(5)
+                        # LOGGING DI DEBUG PER OUTPUT AI
+                        print("\n" + "*"*25 + " DEBUG: OUTPUT DA OPENAI " + "*"*25)
+                        print(json.dumps(analisi_complessiva, indent=2, ensure_ascii=False))
+                        print("*"*74 + "\n")
+
+                        # Aggiornamento della cronologia
+                        annunci_gia_analizzati_set.add(link)
+                        cronologia_deque.append(link)
+                        salva_cronologia(cronologia_deque) # Salva subito per non perdere dati in caso di crash
+
+                        # Logica decisionale per la notifica
+                        if analisi_complessiva.get('is_interessante', False):
+                            punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
+                            print(f"        ✅ Annuncio INTERESSANTE trovato! Punteggio Complessivo: {punteggio}/10. Invio notifica...")
+
+                            messaggio = (
+                                f"🔥 *Potenziale Affare Trovato!* ({expertise_name}) 🔥\n\n"
+                                f"📝 *Titolo*: {annuncio['title']}\n"
+                                f"💰 *Prezzo*: *{annuncio['price']:.2f} €*\n\n"
+                                f"🤖 *Valutazione Complessiva (Score: {punteggio}/10)*:\n"
+                                f"{analisi_complessiva.get('motivazione_complessiva', 'N/A')}\n"
+                                f"*Parole chiave*: {', '.join(analisi_complessiva.get('parole_chiave', []))}"
+                            )
+                            await invia_notifica(messaggio, link, annuncio['img_url'])
+                        else:
+                            punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
+                            print(f"        ❌ Annuncio scartato. Punteggio Complessivo: {punteggio}/10.")
+
+                        await asyncio.sleep(15) # Pausa tra l'analisi di annunci singoli
+
+                    # Pausa tra un termine di ricerca e l'altro
+                    await asyncio.sleep(120) 
             
-            if nuovi_annunci_analizzati:
-                salva_cronologia(cronologia_deque)
-                print("--- Scansione completata. Cronologia aggiornata su file. ---")
-            else:
-                print("--- Scansione completata. Nessun nuovo annuncio trovato. ---")
+            print("\n--- Scansione di tutti i target completata. In attesa del prossimo ciclo orario. ---")
+
         else:
             print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Pausa notturna...")
 
@@ -145,4 +151,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main_loop())
     except KeyboardInterrupt:
-        print("\nShutdown richiesto. Uscita in corso.")
+        print("\nShutdown richiesto dall'utente. Uscita in corso.")
