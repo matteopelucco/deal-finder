@@ -36,15 +36,19 @@ INTERVALLO_INTRA_ARTICLES = 15
 # ==============================================================================
 # Questo prompt universale viene usato per una prima scrematura rapida.
 # La sua unica risposta deve essere {"continua_analisi": boolean}.
+
+DEBUG_TRIAGE = True
+
 TRIAGE_AI_PROMPT = """
     Sei un'intelligenza artificiale da triage, ultra-veloce ed efficiente. Il tuo unico scopo è decidere se un annuncio merita un'analisi più approfondita e costosa. Non devi essere perfetto, devi solo scartare gli annunci palesemente inutili.
     --- PROTOCOLLO DI TRIAGE RAPIDO ---
-    1.  **Anomalia Prezzo/Titolo**: Cerca un'incongruenza. Se il titolo contiene parole come "lotto", "collezione", "stock" e il prezzo è basso, è un segnale forte. Se menziona un marchio di lusso (es. "Omega") e il prezzo è molto basso, è un segnale forte.
+    1.  **Anomalia Prezzo/Titolo**: Cerca un'incongruenza. Se il titolo contiene parole come "lotto", "collezione", "eredità" e il prezzo è basso, è un segnale forte. Se menziona un marchio di lusso (es. "Omega") e il prezzo è molto basso, è un segnale forte.
     2.  **Potenziale Visivo**: Guarda l'immagine. Se mostra una grande quantità di oggetti o un pezzo che sembra di alta qualità nonostante il prezzo basso, è un segnale forte.
-    3.  **Scarta il "Normale"**: Se un annuncio sembra normale (es. "moneta da 2 euro" a 3€, "orologio swatch" a 40€), scartalo. Stiamo cercando solo anomalie.
-    4.  **Scarta annunci a 1 euro
-    Basandoti SOLO su titolo, prezzo e immagine, rispondi ESCLUSIVAMENTE con un oggetto JSON: {"continua_analisi": boolean}.
-    Imposta 'continua_analisi' a true SOLO se individui un segnale forte che suggerisce un potenziale affare. In tutti gli altri casi, impostalo a false.
+    3.  **Scarta il "Normale"**: Se un annuncio sembra normale (es. "moneta da 2 euro" a 3€), scartalo. Stiamo cercando solo anomalie.
+    Basandoti SOLO su titolo, prezzo e immagine, rispondi ESCLUSIVAMENTE con un oggetto JSON con questa struttura:
+    {"continua_analisi": boolean, "motivazione": "stringa"}
+    - "continua_analisi": true SOLO se individui un segnale forte che suggerisce un potenziale affare.
+    - "motivazione": Spiega in 2-5 parole il motivo della tua decisione (es. "prezzo normale", "lotto interessante", "foto non chiara", "sembra un affare").
 """
 # ==============================================================================
 # --- NUOVA CONFIGURAZIONE ASTRATTA DEI TARGET DI RICERCA ---
@@ -58,7 +62,7 @@ SEARCH_TARGETS = [
         "expertise_name": "Caccia ai Lotti da Eredità", 
         "vinted_catalog_id": 4895, 
         "min_price_to_consider": 5.0, 
-        "max_price_to_consider": 50.0, 
+        "max_price_to_consider": 150.0, 
         "search_terms": [
             "lotto monete",
             "monete del nonno",

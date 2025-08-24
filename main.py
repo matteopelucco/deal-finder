@@ -52,7 +52,7 @@ async def main_loop():
         ora_corrente = datetime.datetime.now().hour
         
         # Il bot è attivo solo in questa finestra oraria
-        if 7 <= ora_corrente <= 25:
+        if -1 <= ora_corrente <= 25:
             print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Orario di attività. Inizio nuova scansione...")
             
             # --- CICLO ESTERNO SUI CAMPI DI EXPERTISE ---
@@ -92,36 +92,39 @@ async def main_loop():
                         print(f" -> Nuovo annuncio! Analizzo: {annuncio['title']}")
 
                         # --- PASSAGGIO 1: ANALISI DI TRIAGE ---
-                        merita_approfondimento = await analizza_triage(
+                        merita_approfondimento = analizza_triage(
                             annuncio['title'],
                             annuncio['price'],
                             annuncio['img_url']
                         )
 
-
-
                         if merita_approfondimento:
                             print(f"           -> TRIAGE SUPERATO. Eseguo analisi approfondita...")
                             
                             # --- PASSAGGIO 2: ANALISI APPROFONDITA (SOLO SE NECESSARIO) ---
-                            descrizione = scrap_dettagli_annuncio(link)
+                            # --- Ora riceviamo un dizionario di dettagli ---
+                            dettagli_annuncio = scrap_dettagli_annuncio(link)
                         
                             # LOGGING DI DEBUG PER INPUT AI
                             print("\n" + "="*25 + " DEBUG: INPUT PER OPENAI " + "="*25)
                             print(f"           - Titolo: {annuncio['title']}")
                             print(f"           - Prezzo: {annuncio['price']:.2f} €")
-                            print(f"           - Descrizione: {descrizione[:200]}...") 
+                            print(f"           - Descrizione: {dettagli_annuncio['description'][:200]}...") 
                             print(f"           - Img URL: {annuncio['img_url']}")
                             print(f"           - URL: {annuncio['url']}")
+                            print(f"           - Vendor username: {dettagli_annuncio['vendor_username']}")
+                            print(f"           - Vendor reviews: {dettagli_annuncio['vendor_reviews_count']}")
                             print("="*75)
 
                             # Chiamata unificata alla funzione di analisi olistica
                             analisi_complessiva = analizza_annuncio_completo(
                                 annuncio['title'], 
-                                descrizione, 
+                                dettagli_annuncio['description'], 
                                 annuncio['price'],
                                 annuncio['img_url'],
-                                ai_context
+                                ai_context,
+                                dettagli_annuncio['vendor_username'],
+                                dettagli_annuncio['vendor_reviews_count']
                             )
 
                             # LOGGING DI DEBUG PER OUTPUT AI

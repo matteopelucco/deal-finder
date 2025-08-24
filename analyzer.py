@@ -1,6 +1,6 @@
 import json
 from openai import OpenAI
-from config import OPENAI_KEY, TRIAGE_AI_PROMPT
+from config import OPENAI_KEY, TRIAGE_AI_PROMPT, DEBUG_TRIAGE
 
 # Crea un'istanza del client OpenAI che verrà riutilizzata per tutte le chiamate
 client = OpenAI(api_key=OPENAI_KEY)
@@ -11,57 +11,71 @@ MODELO_ANALISI = "gpt-5-mini"
 # ==============================================================================
 def analizza_triage(titolo: str, prezzo: float, img_url: str) -> bool:
     """
-    Esegue un'analisi preliminare robusta. Restituisce True se l'annuncio
-    merita un'analisi approfondita, altrimenti False.
+    Esegue un'analisi preliminare robusta. Se DEBUG_TRIAGE è True, stampa
+    la motivazione dell'AI. Restituisce True se l'annuncio merita
+    un'analisi approfondita, altrimenti False.
     """
-    prompt = f"""
+    
+
+
+    prompt_text = f"""
     {TRIAGE_AI_PROMPT}
+
     --- DATI DA VALUTARE ---
     - Titolo: "{titolo}"
     - Prezzo: "{prezzo:.2f} €"
     """
-    
-    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
+
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt_text}
+            ]
+        }
+    ]
+
     if img_url:
         messages[0]["content"].append({"type": "image_url", "image_url": {"url": img_url}})
     
+
     try:
         response = client.chat.completions.create(
             model=MODELO_ANALISI,
             response_format={"type": "json_object"},
             messages=messages,
-            max_completion_tokens=200
+            max_completion_tokens=500
         )
         
-        # --- BLOCCO DI CONTROLLO ROBUSTO (LA CORREZIONE È QUI) ---
-        
-        # 1. Controlla se la risposta o le scelte sono vuote
-        if not response or not response.choices:
-            print("        ERRORE TRIAGE: Risposta API vuota o senza 'choices'.")
+        # --- Blocco di controllo robusto (invariato) ---
+        if not response or not response.choices or response.choices[0].finish_reason != 'stop':
+            print("        ERRORE TRIAGE: Risposta API vuota o interrotta.")
             return False
-        choice = response.choices[0]
-        
-        # 2. Controlla se l'AI è stata interrotta per motivi di sicurezza o altro
-        if choice.finish_reason != "stop":
-            print(f"        ATTENZIONE TRIAGE: Generazione interrotta. Motivo: '{choice.finish_reason}'.")
-            return False
-        message_content = choice.message.content
-        
-        # 3. Controlla se il contenuto del messaggio è effettivamente presente
-        if not message_content or not message_content.strip():
-            print("        ERRORE TRIAGE: Il contenuto del messaggio dall'API è vuoto.")
+        message_content = response.choices[0].message.content
+        if not message_content:
+            print("        ERRORE TRIAGE: Contenuto del messaggio vuoto.")
             return False
             
-        # 4. Solo ora, che siamo sicuri, tentiamo il parsing
         json_response = json.loads(message_content)
         
-        return json_response.get("continua_analisi", False)
-    except json.JSONDecodeError as e:
-        # Questo errore ora dovrebbe accadere molto più raramente
-        print(f"        ERRORE TRIAGE di parsing JSON: {e}.")
-        return False
+        # Estraiamo entrambi i valori dal JSON
+        continua_analisi = json_response.get("continua_analisi", False)
+        motivazione = json_response.get("motivazione", "Nessuna motivazione fornita.")
+        # --- NUOVA LOGICA DI DEBUG ---
+        # Se la modalità di debug è attiva, stampiamo la motivazione
+        if DEBUG_TRIAGE:
+            # Se l'analisi viene scartata, stampiamo il motivo per capire perché
+            if not continua_analisi:
+                print(f"           -> TRIAGE FALLITO. Motivo AI: '{motivazione}'")
+            else:
+                # Possiamo anche loggare il motivo del successo, se vogliamo
+                print(f"           -> TRIAGE SUPERATO. Motivo AI: '{motivazione}'")
+        
+        # La funzione restituisce comunque solo il booleano, per non alterare il flusso di main.py
+        return continua_analisi
     except Exception as e:
-        print(f"        ERRORE TRIAGE generico: {e}")
+        print(f"        ERRORE durante l'analisi di triage: {e}")
         return False
 
 
@@ -78,7 +92,9 @@ def _get_default_response() -> dict:
         "parole_chiave": []
     }
 
-def analizza_annuncio_completo(titolo: str, descrizione: str, prezzo: float, img_url: str, ai_context_prompt: str) -> dict:
+def analizza_annuncio_completo(titolo: str, descrizione: str, prezzo: float, img_url: str, 
+                               ai_context_prompt: str, 
+                               vendor_username: str, vendor_reviews_count: int) -> dict:
     """
     Esegue un'analisi olistica e generica di un annuncio (testo, prezzo, immagine)
     basandosi su un contesto di expertise fornito (ai_context_prompt) in una singola chiamata API.
@@ -89,7 +105,9 @@ def analizza_annuncio_completo(titolo: str, descrizione: str, prezzo: float, img
     prompt = f"""
     {ai_context_prompt}
 
-    Analizza i seguenti dati dell'annuncio basandoti ESCLUSIVAMENTE sulle regole e i criteri forniti sopra.
+    
+
+    Analizza i seguenti dati dell'annuncio e del venditore basandoti ESCLUSIVAMENTE sulle regole e i criteri forniti sopra.
     La tua risposta deve essere in formato JSON con la struttura:
     {{
       "is_interessante": boolean,
@@ -102,6 +120,11 @@ def analizza_annuncio_completo(titolo: str, descrizione: str, prezzo: float, img
     - Titolo: "{titolo}"
     - Descrizione: "{descrizione}"
     - Prezzo: "{prezzo:.2f} €"
+    
+    --- DATI CONTESTUALI SUL VENDITORE ---
+    - Username: "{vendor_username}"
+    - Numero di Recensioni: {vendor_reviews_count}
+
     """
     
     # Costruisce il payload del messaggio per l'API, includendo sia testo che immagine.

@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+import re 
 
 # Import delle costanti di configurazione necessarie
 from config import SCRAPER_TIMEOUT_SECONDS
@@ -13,21 +14,18 @@ from config import SCRAPER_TIMEOUT_SECONDS
 VINTED_SELECTORS = {
     # Selettori per la pagina dei risultati di ricerca (catalogo)
     "search_results": {
-        # Selettore per il "contenitore" di un singolo annuncio nella griglia
         "item_card": 'div[data-testid="grid-item"]',
-        # Selettore per il link all'annuncio (relativo all'item_card)
         "link": "a",
-        # Selettore per l'immagine dell'annuncio (relativo all'item_card)
         "image": "img",
-        # Selettore per il titolo. Cerca un data-testid che FINISCE CON "--description-title"
         "title": '[data-testid$="--description-title"]',
-        # Selettore per il prezzo. Cerca un data-testid che FINISCE CON "--price-text"
         "price": '[data-testid$="--price-text"]',
     },
     # Selettori per la pagina di dettaglio di un singolo annuncio
     "item_details": {
         # Selettore per il blocco che contiene la descrizione testuale dell'annuncio
-        "description": "div[itemprop='description']"
+        "description": "div[itemprop='description']",
+        "vendor_username": '[data-testid="profile-username"]',
+        "vendor_reviews_text": 'div.web_ui__Rating__label > span.web_ui__Text__text'
     }
 }
 # ==============================================================================
@@ -108,25 +106,49 @@ def scrap_dettagli_annuncio(url_annuncio: str) -> str:
     """
     Visita la pagina di un singolo annuncio e ne estrae la descrizione testuale.
     """
+
+    default_details = {
+        "description": "Descrizione non trovata.",
+        "vendor_username": "Sconosciuto",
+        "vendor_reviews_count": 0
+    }
+
     if not url_annuncio:
-        return ""
+        return default_details
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
     try:
         response = requests.get(url_annuncio, headers=headers, timeout=SCRAPER_TIMEOUT_SECONDS)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Usa il selettore centralizzato per trovare la descrizione
+        # Estrazione descrizione
         description_container = soup.select_one(VINTED_SELECTORS["item_details"]["description"])
-        
         if description_container:
-            return description_container.get_text(strip=True, separator='\n')
+            description = description_container.get_text(strip=True, separator='\n')
         else:
-            return "Descrizione non trovata."
-            
-    except requests.RequestException as e:
-        print(f"        ERRORE di rete visitando {url_annuncio}: {e}")
-        return "Errore durante il recupero della descrizione."
+            description = "Descrizione non trovata."
+        
+        # Estrazione username venditore
+        username_element = soup.select_one(VINTED_SELECTORS["item_details"]["vendor_username"])
+        if username_element:
+            vendor_username = username_element.get_text(strip=True) if username_element else "Sconosciuto"
+        else:
+            vendor_username = "Venditore non trovato"
+        
+        # Estrazione e pulizia numero recensioni
+        reviews_count = 0
+        reviews_element = soup.select_one(VINTED_SELECTORS["item_details"]["vendor_reviews_text"])
+        if reviews_element:
+            # Usiamo un'espressione regolare per estrarre solo i numeri dal testo (es. "54 recensioni")
+            numbers = re.findall(r'\d+', reviews_element.get_text())
+            if numbers:
+                reviews_count = int(numbers[0])
+        return {
+            "description": description,
+            "vendor_username": vendor_username,
+            "vendor_reviews_count": reviews_count
+        }
+    
     except Exception as e:
         print(f"        ERRORE imprevisto durante lo scraping dei dettagli: {e}")
-        return "Errore imprevisto."
+        return default_details
