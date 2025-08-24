@@ -5,7 +5,7 @@ from collections import deque
 import json
 
 # Import delle configurazioni e delle funzioni dai nostri moduli
-from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_ORARIO, INTERVALLO_INTRA_ARTICLES, INTERVALLO_INTRA_TERMS
+from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_INTERO_CICLO, INTERVALLO_INTRA_ARTICLES, INTERVALLO_INTRA_TERMS
 from scraper import scrap_vinted, scrap_dettagli_annuncio
 from analyzer import analizza_annuncio_completo
 from notifier import invia_notifica
@@ -68,7 +68,7 @@ async def main_loop():
 
                 # --- CICLO INTERNO SUI TERMINI DI RICERCA DI QUESTA EXPERTISE ---
                 for term in search_terms:
-                    print(f"  -> Ricerca per il termine: '{term}' (Catalogo: {catalog_id})")
+                    print(f"  -> Ricerca per il termine: '{term}' per Expertise '{expertise_name}' - (Catalogo: {catalog_id})")
                     
                     risultati_scraper = scrap_vinted(term, catalog_id)
                     annunci_da_considerare = risultati_scraper[:MAX_ANNUNCI_DA_CONSIDERARE]
@@ -77,25 +77,28 @@ async def main_loop():
                     for annuncio in annunci_da_considerare:
                         # Filtro per prezzo minimo, specifico per questo target
                         if annuncio['price'] <= min_price :
+                            print(f"Annuncio scartato, prezzo inferiore al prezzo minimo impostato ({min_price})")
                             continue
                         if annuncio['price'] >= max_price:
+                            print(f"Annuncio scartato, prezzo superiore al prezzo massimo impostato ({max_price})")
                             continue
 
                         # Filtro per annunci già analizzati in passato
                         link = annuncio['link']
                         if link in annunci_gia_analizzati_set:
+                            print(f"Annuncio scartato in quanto già analizzato in passato")
                             continue
 
-                        print(f"        -> Nuovo annuncio! Analizzo: {annuncio['title']}")
+                        print(f" -> Nuovo annuncio! Analizzo: {annuncio['title']}")
                         descrizione = scrap_dettagli_annuncio(link)
                         
                         # LOGGING DI DEBUG PER INPUT AI
                         print("\n" + "="*25 + " DEBUG: INPUT PER OPENAI " + "="*25)
-                        print(f"          - Titolo: {annuncio['title']}")
-                        print(f"          - Prezzo: {annuncio['price']:.2f} €")
-                        print(f"          - Descrizione: {descrizione[:200]}...") 
-                        print(f"          - Img URL: {annuncio['img_url']}")
-                        print(f"          - URL: {annuncio['url']}")
+                        print(f" - Titolo: {annuncio['title']}")
+                        print(f" - Prezzo: {annuncio['price']:.2f} €")
+                        print(f" - Descrizione: {descrizione[:200]}...") 
+                        print(f" - Img URL: {annuncio['img_url']}")
+                        print(f" - URL: {annuncio['url']}")
                         print("="*75)
 
                         # Chiamata unificata alla funzione di analisi olistica
@@ -148,7 +151,7 @@ async def main_loop():
         else:
             print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Pausa notturna...")
 
-        await asyncio.sleep(INTERVALLO_ORARIO)
+        await asyncio.sleep(INTERVALLO_INTERO_CICLO)
 
 if __name__ == "__main__":
     try:
