@@ -1,10 +1,69 @@
 import json
 from openai import OpenAI
-from config import OPENAI_KEY # Unica importazione da config
+from config import OPENAI_KEY, TRIAGE_AI_PROMPT
 
 # Crea un'istanza del client OpenAI che verrà riutilizzata per tutte le chiamate
 client = OpenAI(api_key=OPENAI_KEY)
 MODELO_ANALISI = "gpt-5-mini"
+
+# ==============================================================================
+# --- NUOVA FUNZIONE DI TRIAGE ---
+# ==============================================================================
+def analizza_triage(titolo: str, prezzo: float, img_url: str) -> bool:
+    """
+    Esegue un'analisi preliminare robusta. Restituisce True se l'annuncio
+    merita un'analisi approfondita, altrimenti False.
+    """
+    prompt = f"""
+    {TRIAGE_AI_PROMPT}
+    --- DATI DA VALUTARE ---
+    - Titolo: "{titolo}"
+    - Prezzo: "{prezzo:.2f} €"
+    """
+    
+    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
+    if img_url:
+        messages[0]["content"].append({"type": "image_url", "image_url": {"url": img_url}})
+    
+    try:
+        response = client.chat.completions.create(
+            model=MODELO_ANALISI,
+            response_format={"type": "json_object"},
+            messages=messages,
+            max_completion_tokens=200
+        )
+        
+        # --- BLOCCO DI CONTROLLO ROBUSTO (LA CORREZIONE È QUI) ---
+        
+        # 1. Controlla se la risposta o le scelte sono vuote
+        if not response or not response.choices:
+            print("        ERRORE TRIAGE: Risposta API vuota o senza 'choices'.")
+            return False
+        choice = response.choices[0]
+        
+        # 2. Controlla se l'AI è stata interrotta per motivi di sicurezza o altro
+        if choice.finish_reason != "stop":
+            print(f"        ATTENZIONE TRIAGE: Generazione interrotta. Motivo: '{choice.finish_reason}'.")
+            return False
+        message_content = choice.message.content
+        
+        # 3. Controlla se il contenuto del messaggio è effettivamente presente
+        if not message_content or not message_content.strip():
+            print("        ERRORE TRIAGE: Il contenuto del messaggio dall'API è vuoto.")
+            return False
+            
+        # 4. Solo ora, che siamo sicuri, tentiamo il parsing
+        json_response = json.loads(message_content)
+        
+        return json_response.get("continua_analisi", False)
+    except json.JSONDecodeError as e:
+        # Questo errore ora dovrebbe accadere molto più raramente
+        print(f"        ERRORE TRIAGE di parsing JSON: {e}.")
+        return False
+    except Exception as e:
+        print(f"        ERRORE TRIAGE generico: {e}")
+        return False
+
 
 def _get_default_response() -> dict:
     """

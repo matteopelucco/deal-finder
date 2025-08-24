@@ -30,6 +30,22 @@ INTERVALLO_INTRA_TERMS = 15
 # Intervallo tra una scansione di un annuncio e la seguente
 INTERVALLO_INTRA_ARTICLES = 15
 
+
+# ==============================================================================
+# --- NUOVO PROMPT PER L'ANALISI DI TRIAGE (LEGGERA E A BASSO COSTO) ---
+# ==============================================================================
+# Questo prompt universale viene usato per una prima scrematura rapida.
+# La sua unica risposta deve essere {"continua_analisi": boolean}.
+TRIAGE_AI_PROMPT = """
+    Sei un'intelligenza artificiale da triage, ultra-veloce ed efficiente. Il tuo unico scopo è decidere se un annuncio merita un'analisi più approfondita e costosa. Non devi essere perfetto, devi solo scartare gli annunci palesemente inutili.
+    --- PROTOCOLLO DI TRIAGE RAPIDO ---
+    1.  **Anomalia Prezzo/Titolo**: Cerca un'incongruenza. Se il titolo contiene parole come "lotto", "collezione", "stock" e il prezzo è basso, è un segnale forte. Se menziona un marchio di lusso (es. "Omega") e il prezzo è molto basso, è un segnale forte.
+    2.  **Potenziale Visivo**: Guarda l'immagine. Se mostra una grande quantità di oggetti o un pezzo che sembra di alta qualità nonostante il prezzo basso, è un segnale forte.
+    3.  **Scarta il "Normale"**: Se un annuncio sembra normale (es. "moneta da 2 euro" a 3€, "orologio swatch" a 40€), scartalo. Stiamo cercando solo anomalie.
+    4.  **Scarta annunci a 1 euro
+    Basandoti SOLO su titolo, prezzo e immagine, rispondi ESCLUSIVAMENTE con un oggetto JSON: {"continua_analisi": boolean}.
+    Imposta 'continua_analisi' a true SOLO se individui un segnale forte che suggerisce un potenziale affare. In tutti gli altri casi, impostalo a false.
+"""
 # ==============================================================================
 # --- NUOVA CONFIGURAZIONE ASTRATTA DEI TARGET DI RICERCA ---
 # ==============================================================================

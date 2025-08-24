@@ -7,7 +7,7 @@ import json
 # Import delle configurazioni e delle funzioni dai nostri moduli
 from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_INTERO_CICLO, INTERVALLO_INTRA_ARTICLES, INTERVALLO_INTRA_TERMS
 from scraper import scrap_vinted, scrap_dettagli_annuncio
-from analyzer import analizza_annuncio_completo
+from analyzer import analizza_triage, analizza_annuncio_completo
 from notifier import invia_notifica
 
 # --- GESTIONE DELLA CRONOLOGIA PERSISTENTE ---
@@ -90,56 +90,73 @@ async def main_loop():
                             continue
 
                         print(f" -> Nuovo annuncio! Analizzo: {annuncio['title']}")
-                        descrizione = scrap_dettagli_annuncio(link)
-                        
-                        # LOGGING DI DEBUG PER INPUT AI
-                        print("\n" + "="*25 + " DEBUG: INPUT PER OPENAI " + "="*25)
-                        print(f" - Titolo: {annuncio['title']}")
-                        print(f" - Prezzo: {annuncio['price']:.2f} €")
-                        print(f" - Descrizione: {descrizione[:200]}...") 
-                        print(f" - Img URL: {annuncio['img_url']}")
-                        print(f" - URL: {annuncio['url']}")
-                        print("="*75)
 
-                        # Chiamata unificata alla funzione di analisi olistica
-                        analisi_complessiva = analizza_annuncio_completo(
-                            annuncio['title'], 
-                            descrizione, 
+                        # --- PASSAGGIO 1: ANALISI DI TRIAGE ---
+                        merita_approfondimento = await analizza_triage(
+                            annuncio['title'],
                             annuncio['price'],
-                            annuncio['img_url'],
-                            ai_context
+                            annuncio['img_url']
                         )
 
-                        # LOGGING DI DEBUG PER OUTPUT AI
-                        print("\n" + "*"*25 + " DEBUG: OUTPUT DA OPENAI " + "*"*25)
-                        print(json.dumps(analisi_complessiva, indent=2, ensure_ascii=False))
-                        print("*"*74 + "\n")
 
-                        # Aggiornamento della cronologia
-                        annunci_gia_analizzati_set.add(link)
-                        cronologia_deque.append(link)
-                        salva_cronologia(cronologia_deque) # Salva subito per non perdere dati in caso di crash
 
-                        # Logica decisionale per la notifica
-                        if analisi_complessiva.get('is_interessante', False):
-                            punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
-                            print(f"        ✅ Annuncio INTERESSANTE trovato! Punteggio Complessivo: {punteggio}/10. Invio notifica...")
+                        if merita_approfondimento:
+                            print(f"           -> TRIAGE SUPERATO. Eseguo analisi approfondita...")
+                            
+                            # --- PASSAGGIO 2: ANALISI APPROFONDITA (SOLO SE NECESSARIO) ---
+                            descrizione = scrap_dettagli_annuncio(link)
+                        
+                            # LOGGING DI DEBUG PER INPUT AI
+                            print("\n" + "="*25 + " DEBUG: INPUT PER OPENAI " + "="*25)
+                            print(f"           - Titolo: {annuncio['title']}")
+                            print(f"           - Prezzo: {annuncio['price']:.2f} €")
+                            print(f"           - Descrizione: {descrizione[:200]}...") 
+                            print(f"           - Img URL: {annuncio['img_url']}")
+                            print(f"           - URL: {annuncio['url']}")
+                            print("="*75)
 
-                            messaggio = (
-                                f"🔥 *Potenziale Affare Trovato!* ({expertise_name}) 🔥\n\n"
-                                f"📝 *Titolo*: {annuncio['title']}\n"
-                                f"💰 *Prezzo*: *{annuncio['price']:.2f} €*\n\n"
-                                f"🤖 *Valutazione Complessiva (Score: {punteggio}/10)*:\n"
-                                f"{analisi_complessiva.get('motivazione_complessiva', 'N/A')}\n"
-                                f"*Parole chiave*: {', '.join(analisi_complessiva.get('parole_chiave', []))}"
+                            # Chiamata unificata alla funzione di analisi olistica
+                            analisi_complessiva = analizza_annuncio_completo(
+                                annuncio['title'], 
+                                descrizione, 
+                                annuncio['price'],
+                                annuncio['img_url'],
+                                ai_context
                             )
-                            await invia_notifica(messaggio, link, annuncio['img_url'])
-                        else:
-                            punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
-                            print(f"        ❌ Annuncio scartato. Punteggio Complessivo: {punteggio}/10.")
 
-                        print(f"Pausa tattica di {INTERVALLO_INTRA_ARTICLES} secondi prima del prossimo annuncio")
-                        await asyncio.sleep(INTERVALLO_INTRA_ARTICLES) # Pausa tra l'analisi di annunci singoli
+                            # LOGGING DI DEBUG PER OUTPUT AI
+                            print("\n" + "*"*25 + " DEBUG: OUTPUT DA OPENAI " + "*"*25)
+                            print(json.dumps(analisi_complessiva, indent=2, ensure_ascii=False))
+                            print("*"*74 + "\n")
+
+                            # Aggiornamento della cronologia
+                            annunci_gia_analizzati_set.add(link)
+                            cronologia_deque.append(link)
+                            salva_cronologia(cronologia_deque) # Salva subito per non perdere dati in caso di crash
+
+                            # Logica decisionale per la notifica
+                            if analisi_complessiva.get('is_interessante', False):
+                                punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
+                                print(f"        ✅ Annuncio INTERESSANTE trovato! Punteggio Complessivo: {punteggio}/10. Invio notifica...")
+
+                                messaggio = (
+                                    f"🔥 *Potenziale Affare Trovato!* ({expertise_name}) 🔥\n\n"
+                                    f"📝 *Titolo*: {annuncio['title']}\n"
+                                    f"💰 *Prezzo*: *{annuncio['price']:.2f} €*\n\n"
+                                    f"🤖 *Valutazione Complessiva (Score: {punteggio}/10)*:\n"
+                                    f"{analisi_complessiva.get('motivazione_complessiva', 'N/A')}\n"
+                                    f"*Parole chiave*: {', '.join(analisi_complessiva.get('parole_chiave', []))}"
+                                )
+                                await invia_notifica(messaggio, link, annuncio['img_url'])
+                            else:
+                                punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
+                                print(f"        ❌ Annuncio scartato. Punteggio Complessivo: {punteggio}/10.")
+
+                            print(f"Pausa tattica di {INTERVALLO_INTRA_ARTICLES} secondi prima del prossimo annuncio")
+                            await asyncio.sleep(INTERVALLO_INTRA_ARTICLES) # Pausa tra l'analisi di annunci singoli
+
+                        else:
+                            print(f"           -> TRIAGE FALLITO. Annuncio scartato senza analisi approfondita.")
 
                     # Pausa tra un termine di ricerca e l'altro
                     print(f"Pausa tattica di {INTERVALLO_INTRA_TERMS} secondi prima del prossimo termine di ricerca")
