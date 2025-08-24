@@ -5,7 +5,7 @@ from collections import deque
 import json
 
 # Import delle configurazioni e delle funzioni dai nostri moduli
-from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_ORARIO
+from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_ORARIO, INTERVALLO_INTRA_ARTICLES, INTERVALLO_INTRA_TERMS
 from scraper import scrap_vinted, scrap_dettagli_annuncio
 from analyzer import analizza_annuncio_completo
 from notifier import invia_notifica
@@ -135,10 +135,13 @@ async def main_loop():
                             punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
                             print(f"        ❌ Annuncio scartato. Punteggio Complessivo: {punteggio}/10.")
 
-                        await asyncio.sleep(15) # Pausa tra l'analisi di annunci singoli
+                        print(f"Pausa tattica di {INTERVALLO_INTRA_ARTICLES} secondi prima del prossimo annuncio")
+                        await asyncio.sleep(INTERVALLO_INTRA_ARTICLES) # Pausa tra l'analisi di annunci singoli
 
                     # Pausa tra un termine di ricerca e l'altro
-                    await asyncio.sleep(120) 
+                    print(f"Pausa tattica di {INTERVALLO_INTRA_TERMS} secondi prima del prossimo termine di ricerca")
+
+                    await asyncio.sleep(INTERVALLO_INTRA_TERMS) 
             
             print("\n--- Scansione di tutti i target completata. In attesa del prossimo ciclo orario. ---")
 
