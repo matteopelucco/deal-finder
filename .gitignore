@@ -207,3 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 secrets.txt
+scarti_prezzo_basso.txt
+scarti_analisi_approfondita.txt
+scarti_prezzo_alto.txt

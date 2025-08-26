@@ -6,18 +6,11 @@ from config import OPENAI_KEY, TRIAGE_AI_PROMPT, DEBUG_TRIAGE
 client = OpenAI(api_key=OPENAI_KEY)
 MODELO_ANALISI = "gpt-5-mini"
 
-# ==============================================================================
-# --- NUOVA FUNZIONE DI TRIAGE ---
-# ==============================================================================
-def analizza_triage(titolo: str, prezzo: float, img_url: str) -> bool:
+def analizza_triage(titolo: str, prezzo: float, img_url: str) -> dict:
     """
-    Esegue un'analisi preliminare robusta. Se DEBUG_TRIAGE è True, stampa
-    la motivazione dell'AI. Restituisce True se l'annuncio merita
-    un'analisi approfondita, altrimenti False.
+    Esegue un'analisi preliminare robusta. Restituisce l'intero dizionario
+    di risposta dell'AI per permettere un logging granulare.
     """
-    
-
-
     prompt_text = f"""
     {TRIAGE_AI_PROMPT}
 
@@ -25,7 +18,6 @@ def analizza_triage(titolo: str, prezzo: float, img_url: str) -> bool:
     - Titolo: "{titolo}"
     - Prezzo: "{prezzo:.2f} €"
     """
-
 
     messages = [
         {
@@ -35,11 +27,9 @@ def analizza_triage(titolo: str, prezzo: float, img_url: str) -> bool:
             ]
         }
     ]
-
     if img_url:
         messages[0]["content"].append({"type": "image_url", "image_url": {"url": img_url}})
     
-
     try:
         response = client.chat.completions.create(
             model=MODELO_ANALISI,
@@ -51,32 +41,26 @@ def analizza_triage(titolo: str, prezzo: float, img_url: str) -> bool:
         # --- Blocco di controllo robusto (invariato) ---
         if not response or not response.choices or response.choices[0].finish_reason != 'stop':
             print("        ERRORE TRIAGE: Risposta API vuota o interrotta.")
-            return False
+            # Restituisce un dizionario di default che verrà scartato
+            return {"continua_analisi": False, "motivazione": "Risposta API vuota o interrotta."}
+
         message_content = response.choices[0].message.content
         if not message_content:
             print("        ERRORE TRIAGE: Contenuto del messaggio vuoto.")
-            return False
-            
+            # Restituisce un dizionario di default che verrà scartato
+            return {"continua_analisi": False, "motivazione": "Contenuto del messaggio vuoto."}
+
         json_response = json.loads(message_content)
-        
-        # Estraiamo entrambi i valori dal JSON
-        continua_analisi = json_response.get("continua_analisi", False)
-        motivazione = json_response.get("motivazione", "Nessuna motivazione fornita.")
-        # --- NUOVA LOGICA DI DEBUG ---
-        # Se la modalità di debug è attiva, stampiamo la motivazione
-        if DEBUG_TRIAGE:
-            # Se l'analisi viene scartata, stampiamo il motivo per capire perché
-            if not continua_analisi:
-                print(f"           -> TRIAGE FALLITO. Motivo AI: '{motivazione}'")
-            else:
-                # Possiamo anche loggare il motivo del successo, se vogliamo
-                print(f"           -> TRIAGE SUPERATO. Motivo AI: '{motivazione}'")
-        
-        # La funzione restituisce comunque solo il booleano, per non alterare il flusso di main.py
-        return continua_analisi
+
+        # --- MODIFICA CHIAVE ---
+        # Restituisce l'intero dizionario JSON
+        return json_response
+
     except Exception as e:
         print(f"        ERRORE durante l'analisi di triage: {e}")
-        return False
+        # In caso di errore, restituisce un dizionario di default che verrà scartato
+        # e permetterà di loggare l'errore specifico.
+        return {"continua_analisi": False, "motivazione": f"Errore interno: {e}"}
 
 
 def _get_default_response() -> dict:

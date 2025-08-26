@@ -14,6 +14,20 @@ from notifier import invia_notifica
 
 HISTORY_FILE = "analyzed_listings.txt"
 
+# --- NUOVA FUNZIONE DI LOGGING PER GLI ARTICOLI SCARTATI ---
+def log_scarto(nome_file: str, url: str, motivazione: str):
+    """
+    Scrive l'URL di un articolo scartato e la sua motivazione in un file di log specifico.
+    Usa la modalità 'a' (append) per aggiungere righe senza cancellare il file.
+    """
+    try:
+        with open(nome_file, 'a', encoding='utf-8') as f:
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            f.write(f"[{timestamp}] URL: {url} | MOTIVO: {motivazione}\n")
+    except Exception as e:
+        print(f"!!! ERRORE durante la scrittura del file di log '{nome_file}': {e}")
+
+
 def carica_cronologia():
     """
     Carica la cronologia degli annunci già analizzati da un file di testo.
@@ -78,9 +92,14 @@ async def main_loop():
                         # Filtro per prezzo minimo, specifico per questo target
                         if annuncio['price'] <= min_price :
                             print(f"Annuncio scartato, prezzo inferiore al prezzo minimo impostato ({min_price})")
+                            motivazione_scarto = f"Prezzo ({annuncio['price']:.2f}€) <= Soglia Minima ({min_price:.2f}€)"
+                            log_scarto("scarti_prezzo_basso.txt", link, motivazione_scarto)
                             continue
+
                         if annuncio['price'] >= max_price:
                             print(f"Annuncio scartato, prezzo superiore al prezzo massimo impostato ({max_price})")
+                            motivazione_scarto = f"Prezzo ({annuncio['price']:.2f}€) > Soglia Massima ({max_price:.2f}€)"
+                            log_scarto("scarti_prezzo_alto.txt", link, motivazione_scarto)
                             continue
 
                         # Filtro per annunci già analizzati in passato
@@ -92,13 +111,13 @@ async def main_loop():
                         print(f" -> Nuovo annuncio! Analizzo: {annuncio['title']}")
 
                         # --- PASSAGGIO 1: ANALISI DI TRIAGE ---
-                        merita_approfondimento = analizza_triage(
+                        risultato_triage = analizza_triage(
                             annuncio['title'],
                             annuncio['price'],
                             annuncio['img_url']
                         )
 
-                        if merita_approfondimento:
+                        if risultato_triage['continua_analisi']:
                             print(f"           -> TRIAGE SUPERATO. Eseguo analisi approfondita...")
                             
                             # --- PASSAGGIO 2: ANALISI APPROFONDITA (SOLO SE NECESSARIO) ---
@@ -138,27 +157,38 @@ async def main_loop():
                             salva_cronologia(cronologia_deque) # Salva subito per non perdere dati in caso di crash
 
                             # Logica decisionale per la notifica
-                            if analisi_complessiva.get('is_interessante', False):
-                                punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
-                                print(f"        ✅ Annuncio INTERESSANTE trovato! Punteggio Complessivo: {punteggio}/10. Invio notifica...")
+                            punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
 
-                                messaggio = (
-                                    f"🔥 *Potenziale Affare Trovato!* ({expertise_name}) 🔥\n\n"
-                                    f"📝 *Titolo*: {annuncio['title']}\n"
-                                    f"💰 *Prezzo*: *{annuncio['price']:.2f} €*\n\n"
-                                    f"🤖 *Valutazione Complessiva (Score: {punteggio}/10)*:\n"
-                                    f"{analisi_complessiva.get('motivazione_complessiva', 'N/A')}\n"
-                                    f"*Parole chiave*: {', '.join(analisi_complessiva.get('parole_chiave', []))}"
-                                )
-                                await invia_notifica(messaggio, link, annuncio['img_url'])
+                            if analisi_complessiva.get('is_interessante', False):
+                                print(f"        ✅ Annuncio INTERESSANTE trovato! Punteggio Complessivo: {punteggio}/10.")
+                                if (punteggio > 7):
+
+                                    messaggio = (
+                                        f"🔥 *Potenziale Affare Trovato!* ({expertise_name}) 🔥\n\n"
+                                        f"📝 *Titolo*: {annuncio['title']}\n"
+                                        f"💰 *Prezzo*: *{annuncio['price']:.2f} €*\n\n"
+                                        f"🤖 *Valutazione Complessiva (Score: {punteggio}/10)*:\n"
+                                        f"{analisi_complessiva.get('motivazione_complessiva', 'N/A')}\n"
+                                        f"*Parole chiave*: {', '.join(analisi_complessiva.get('parole_chiave', []))}"
+                                    )
+                                    await invia_notifica(messaggio, link, annuncio['img_url'])
+                                else:
+                                    motivazione_scarto = f"Punteggio ({punteggio}/10) inferiore alla soglia. Motivazione AI: {analisi_complessiva.get('motivazione_complessiva', 'N/A')}"
+                                    log_scarto("scarti_analisi_approfondita.txt", link, motivazione_scarto)
+                                    print(f"           ❌ Analisi approfondita ha scartato l'annuncio. {motivazione_scarto}")
                             else:
-                                punteggio = analisi_complessiva.get('punteggio_complessivo', 0)
+                                # --- 4. LOGGING SCARTI DALL'ANALISI APPROFONDITA ---
+                                motivazione_scarto = f"Non ritenuto interessante. Motivazione AI: {analisi_complessiva.get('motivazione_complessiva', 'N/A')}"
+                                log_scarto("scarti_analisi_approfondita.txt", link, motivazione_scarto)                   
                                 print(f"        ❌ Annuncio scartato. Punteggio Complessivo: {punteggio}/10.")
 
                             print(f"Pausa tattica di {INTERVALLO_INTRA_ARTICLES} secondi prima del prossimo annuncio")
                             await asyncio.sleep(INTERVALLO_INTRA_ARTICLES) # Pausa tra l'analisi di annunci singoli
 
                         else:
+                            # --- 3. LOGGING SCARTI DAL TRIAGE ---
+                            motivazione_triage = risultato_triage.get('motivazione', 'Nessuna motivazione fornita.')
+                            log_scarto("scarti_triage.txt", link, motivazione_triage)
                             print(f"           -> TRIAGE FALLITO. Annuncio scartato senza analisi approfondita.")
 
                     # Pausa tra un termine di ricerca e l'altro
