@@ -89,6 +89,10 @@ async def main_loop():
                     print(f"     Trovati {len(risultati_scraper)} annunci, ne considero i primi {len(annunci_da_considerare)}.")
 
                     for annuncio in annunci_da_considerare:
+                        
+                        # Filtro per annunci già analizzati in passato
+                        link = annuncio['link']
+                        
                         # Filtro per prezzo minimo, specifico per questo target
                         if annuncio['price'] <= min_price :
                             print(f"Annuncio scartato, prezzo inferiore al prezzo minimo impostato ({min_price})")
@@ -102,8 +106,6 @@ async def main_loop():
                             log_scarto("scarti_prezzo_alto.txt", link, motivazione_scarto)
                             continue
 
-                        # Filtro per annunci già analizzati in passato
-                        link = annuncio['link']
                         if link in annunci_gia_analizzati_set:
                             print(f"Annuncio scartato in quanto già analizzato in passato")
                             continue
