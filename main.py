@@ -6,7 +6,7 @@ import json
 
 # Import delle configurazioni e delle funzioni dai nostri moduli
 from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_INTERO_CICLO, INTERVALLO_INTRA_ARTICLES, INTERVALLO_INTRA_TERMS
-from scraper import scrap_vinted, scrap_dettagli_annuncio
+from scraper_selenium import scrap_vinted, scrap_dettagli_annuncio
 from analyzer import analizza_triage, analizza_annuncio_completo
 from notifier import invia_notifica
 

@@ -1,7 +1,22 @@
-import requests, os, datetime
+import requests, os, datetime, time
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import re 
+
+
+
+# Importazioni per Selenium
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+
+
+# --- CONFIGURAZIONE SELENIUM ---
+# Inserisci qui il percorso dove hai salvato chromedriver.exe
+CHROME_DRIVER_PATH = r'C:\dev\software\selenium\chromedriver-win64\chromedriver.exe'
 
 # Import delle costanti di configurazione necessarie
 from config import SCRAPER_TIMEOUT_SECONDS, DEBUG_SCRAPER_HTML
@@ -18,7 +33,7 @@ VINTED_SELECTORS = {
         "link": 'a[data-testid$="--overlay-link"]',
         "image": 'img[data-testid$="--image--img"]',
         "title": 'p[data-testid$="--description-title"]',
-        "price": 'p[data-testid$="--price-text"]'
+        "price": 'p[data-testid$="--price-text"]',
     },
     # Selettori per la pagina di dettaglio di un singolo annuncio
     "item_details": {
@@ -56,11 +71,38 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
     # Headers per simulare un browser e ridurre la probabilità di essere bloccati
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
 
+
+    # Impostazioni di Chrome
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")  # Esegui senza aprire una finestra del browser
+    options.add_argument("--log-level=3") # Riduci il logging nel terminale
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+    # options.add_argument("--start-maximized")
+    
+    service = Service(CHROME_DRIVER_PATH)
+    driver = webdriver.Chrome(service=service, options=options)
+    
     print(f"DEBUG: Scraping URL -> ", url)
 
     try:
-        response = requests.get(url, headers=headers, timeout=SCRAPER_TIMEOUT_SECONDS)
-        response.raise_for_status()  # Solleva un'eccezione per errori HTTP (es. 403, 404, 500)
+        driver.get(url)
+        
+        # FASE 1: Gestione Cookie
+        try:
+            cookie_button_locator = (By.ID, "onetrust-accept-btn-handler")
+            cookie_button = WebDriverWait(driver, 5).until(EC.element_to_be_clickable(cookie_button_locator))
+            cookie_button.click()
+            WebDriverWait(driver, 5).until(EC.invisibility_of_element_located(cookie_button_locator))
+        except (TimeoutException, NoSuchElementException):
+            print("        INFO: Nessun banner dei cookie gestito.")
+        # FASE 2: Scroll e Attesa Risultati
+        driver.execute_script("window.scrollTo(0, 500);")
+        WebDriverWait(driver, SCRAPER_TIMEOUT_SECONDS).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, VINTED_SELECTORS["search_results"]["item_card"]))
+        )
+        print(f"    INFO: Griglia dei prodotti trovata per '{term}'. Eseguo il parsing...")
+        # --- CORREZIONE CHIAVE: PARSING IMMEDIATO ---
+        page_html = driver.page_source
 
         # --- NUOVA LOGICA DI DEBUG HTML ---
         if DEBUG_SCRAPER_HTML:
@@ -77,52 +119,62 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
             try:
                 # Salva il contenuto HTML grezzo nel file
                 with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(response.text)
+                    f.write(page_html)
                 print(f"DEBUG: HTML della ricerca salvato in '{file_path}'")
             except Exception as e:
                 print(f"ERROR: Impossibile salvare il file HTML di debug: {e}")
-        # --- FINE LOGICA DI DEBUG ---
-    except requests.RequestException as e:
-        print(f"ERROR: Errore durante la richiesta a Vinted per '{term}': {e}")
-        return []
+        # --- FINE LOGICA DI DEBUG ---  
 
-    soup = BeautifulSoup(response.content, "html.parser")
-    results = []
-
-    # Usa il selettore centralizzato per trovare tutti i contenitori degli annunci
-    items = soup.select(VINTED_SELECTORS["search_results"]["item_card"])
-    
-    if not items:
-        print(f"INFO: Nessun annuncio trovato per '{term}'. Il selettore '{VINTED_SELECTORS['search_results']['item_card']}' potrebbe essere obsoleto o non ci sono risultati.")
-        return []
-
-    for item in items:
-        # Per ogni annuncio, estrae i singoli dati usando i selettori relativi
-        link_element = item.find(VINTED_SELECTORS["search_results"]["link"], href=True)
-        if not link_element:
-            continue
-        full_link = urljoin(base_url, link_element['href'])
-
-        img_element = item.find(VINTED_SELECTORS["search_results"]["image"])
-        img_url = img_element['src'] if img_element and 'src' in img_element.attrs else None
-
-        title_element = item.select_one(VINTED_SELECTORS["search_results"]["title"])
-        title = title_element.get_text(strip=True) if title_element else "Titolo non trovato"
+        # Parsing con BeautifulSoup
+        soup = BeautifulSoup(page_html, 'lxml') # Usiamo il parser lxml che abbiamo confermato funzionare
+        item_cards = soup.select(VINTED_SELECTORS["search_results"]["item_card"])
         
-        price_element = item.select_one(VINTED_SELECTORS["search_results"]["price"])
-        price_str = price_element.get_text(strip=True) if price_element else "0,00 €"
-        price_float = _clean_price(price_str)
+        print(f"DEBUG: found {len(item_cards)} cards")
 
-        results.append({
-            "term": term,
-            "title": title,
-            "link": full_link,
-            "price": price_float,
-            "img_url": img_url,
-            "url": full_link
-        })
+        if not item_cards:
+            # Questo messaggio ora indica un vero problema di parsing, non di caricamento
+            print(f"ATTENZIONE: Nessun 'item_card' trovato da BeautifulSoup per '{term}' nonostante la griglia fosse presente.")
+            driver.quit()
+            return []
+        
+        # Estrazione dei dati
+        results = []
 
-    return results
+        for item in item_cards:
+
+            link_element = item.select_one (VINTED_SELECTORS["search_results"]["link"], href=True)
+            if not link_element:
+                print(f"ERROR: link non trovato")
+                continue
+            full_link = urljoin(base_url, link_element['href'])
+
+            img_element = item.select_one (VINTED_SELECTORS["search_results"]["image"])
+            img_url = img_element['src'] if img_element and 'src' in img_element.attrs else None
+
+            title_element = item.select_one(VINTED_SELECTORS["search_results"]["title"])
+            title = title_element.get_text(strip=True) if title_element else "Titolo non trovato"
+            
+            price_element = item.select_one(VINTED_SELECTORS["search_results"]["price"])
+            price_str = price_element.get_text(strip=True) if price_element else "0,00 €"
+            price_float = _clean_price(price_str)
+
+            results.append({
+                "term": term,
+                "link": full_link,
+                "price": price_float,
+                "img_url": img_url,
+                "url": full_link,
+                "title": title
+            })
+
+            print("aaa")
+
+        driver.quit()
+        return results
+    except Exception as e:
+        print(f"ERRORE: Errore grave nel processo di scraping per '{term}'. Errore: {e}")
+        driver.quit()
+        return []
 
 def scrap_dettagli_annuncio(url_annuncio: str) -> str:
     """

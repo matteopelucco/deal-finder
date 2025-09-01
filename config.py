@@ -31,6 +31,15 @@ INTERVALLO_INTRA_TERMS = 15
 INTERVALLO_INTRA_ARTICLES = 15
 
 # ==============================================================================
+# --- NUOVA MODALITÀ DI DEBUG PER LO SCRAPER ---
+# Se impostato a True, lo scraper salverà l'HTML grezzo di ogni pagina di ricerca 
+# in un file nella cartella 'debug_logs/'. Questo è estremamente utile per
+# diagnosticare problemi con i selettori CSS.
+# Impostalo a False per le operazioni normali.
+# ==============================================================================
+DEBUG_SCRAPER_HTML = False
+
+# ==============================================================================
 # --- NUOVO PROMPT PER L'ANALISI DI TRIAGE (LEGGERA E A BASSO COSTO) ---
 # ==============================================================================
 # Questo prompt universale viene usato per una prima scrematura rapida.
