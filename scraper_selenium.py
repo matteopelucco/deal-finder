@@ -167,8 +167,6 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
                 "title": title
             })
 
-            print("aaa")
-
         driver.quit()
         return results
     except Exception as e:
