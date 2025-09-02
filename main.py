@@ -7,7 +7,7 @@ import json
 # Import delle configurazioni e delle funzioni dai nostri moduli
 from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_INTERO_CICLO, INTERVALLO_INTRA_ARTICLES, INTERVALLO_INTRA_TERMS
 from scraper_selenium import scrap_vinted, scrap_dettagli_annuncio
-from analyzer import analizza_triage, analizza_annuncio_completo
+from analyzer import doTriage, doCompleteArticleAnalysis
 from notifier import invia_notifica
 
 # --- GESTIONE DELLA CRONOLOGIA PERSISTENTE ---
@@ -113,7 +113,7 @@ async def main_loop():
                         print(f" -> Nuovo annuncio! Analizzo: {annuncio['title']}")
 
                         # --- PASSAGGIO 1: ANALISI DI TRIAGE ---
-                        risultato_triage = analizza_triage(
+                        risultato_triage = doTriage(
                             annuncio['title'],
                             annuncio['price'],
                             annuncio['img_url']
@@ -138,7 +138,7 @@ async def main_loop():
                             print("="*75)
 
                             # Chiamata unificata alla funzione di analisi olistica
-                            analisi_complessiva = analizza_annuncio_completo(
+                            analisi_complessiva = doCompleteArticleAnalysis(
                                 annuncio['title'], 
                                 dettagli_annuncio['description'], 
                                 annuncio['price'],
