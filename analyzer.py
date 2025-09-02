@@ -1,6 +1,6 @@
 import json
 from openai import OpenAI
-from config import OPENAI_KEY, TRIAGE_AI_PROMPT, DEBUG_TRIAGE
+from config import OPENAI_KEY, TRIAGE_AI_PROMPT
 
 # Crea un'istanza del client OpenAI che verrà riutilizzata per tutte le chiamate
 client = OpenAI(api_key=OPENAI_KEY)

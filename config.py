@@ -1,13 +1,12 @@
 import os
 from dotenv import load_dotenv
+
 # Carica le variabili dal file .env nella sessione corrente
 load_dotenv()
+
 # --- CONFIGURAZIONI UTENTE CARICATE DALL'AMBIENTE ---
-# Legge il token del bot dal file .env
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-# Legge il Chat ID dal file .env
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-# Legge la chiave API di OpenAI dal file .env
 OPENAI_KEY = os.getenv("OPENAI_KEY")
 
 # Intervallo di attesa tra una scansione completa e l'altra (in secondi)
@@ -31,21 +30,13 @@ INTERVALLO_INTRA_TERMS = 15
 INTERVALLO_INTRA_ARTICLES = 15
 
 # ==============================================================================
-# --- NUOVA MODALITÀ DI DEBUG PER LO SCRAPER ---
+# --- MODALITÀ DI DEBUG PER LO SCRAPER ---
 # Se impostato a True, lo scraper salverà l'HTML grezzo di ogni pagina di ricerca 
 # in un file nella cartella 'debug_logs/'. Questo è estremamente utile per
 # diagnosticare problemi con i selettori CSS.
 # Impostalo a False per le operazioni normali.
 # ==============================================================================
 DEBUG_SCRAPER_HTML = False
-
-# ==============================================================================
-# --- NUOVO PROMPT PER L'ANALISI DI TRIAGE (LEGGERA E A BASSO COSTO) ---
-# ==============================================================================
-# Questo prompt universale viene usato per una prima scrematura rapida.
-# La sua unica risposta deve essere {"continua_analisi": boolean}.
-
-DEBUG_TRIAGE = True
 
 TRIAGE_AI_PROMPT = """
     Sei un'intelligenza artificiale da triage, ultra-veloce ed efficiente. Il tuo unico scopo è decidere se un annuncio merita un'analisi più approfondita e costosa. Non devi essere perfetto, devi solo scartare gli annunci palesemente inutili.
@@ -105,7 +96,16 @@ SEARCH_TARGETS = [
             "sovereign", 
             "moneta dorata"
         ],
-        "ai_context_prompt": "MISSIONE: Identificare monete d'oro ufficiali (Marengo, Sterline, Vreneli, etc.) vendute da privati inesperti a un prezzo significativamente inferiore al loro valore intrinseco. Massima allerta per le truffe.\n--- PROTOCOLLO CACCIA AL TESORO D'ORO ---\n0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che l'annuncio sia per una MONETA D'ORO. Se mostra lingotti, gioielli, medaglie o monete placcate, assegna immediatamente un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'.\n1. **Analisi del Venditore (Critico per le Truffe!)**: La combinazione di un oggetto di alto valore e un venditore nuovo è il più grande segnale di allarme. Un venditore con 0-10 recensioni che vende una moneta d'oro è da considerare estremamente rischioso. La massima fiducia va a venditori con poche recensioni (< 50) che usano un linguaggio da \"eredità\".\n2. **Analisi del Prezzo (Formula dell'Affare)**: L'oro vale circa 95€/grammo. Stiamo cercando un prezzo target inferiore a 75€/grammo. Un Marengo (circa 5.8g di oro puro) dovrebbe valere ~550€. Un affare eccezionale è sotto i 450€. Usa questa logica: se il prezzo è troppo basso per essere vero (es. 100€ per un Marengo), è una truffa al 99%. Se è basso ma plausibile (350-450€), è il nostro target.\n3. **Indicatore Testuale dell'Inesperienza**: Cerca attivamente parole come \"nonno\", \"eredità\", \"trovata in un cassetto\", \"non me ne intendo\". Questa è la giustificazione più forte per un prezzo basso e un annuncio legittimo.\n--- PUNTEGGIO (SOLO AFFARI VERI) ---\n- **Punteggio 9-10 (JACKPOT)**: Annuncio con testo che indica chiaramente ignoranza (\"moneta del nonno\") E prezzo plausibilmente basso (es. 350-450€ per un Marengo) E un venditore con un numero di recensioni basso ma non nullo (es. 5-30 recensioni).\n- **Punteggio 7-8 (Affare Potenziale)**: Prezzo basso ma venditore con molte recensioni (potrebbe essere un professionista che svende) o testo vago. Richiede attenzione.\n- **Punteggio 1-6 (Da Scartare)**: Prezzo troppo basso per essere vero, venditore con 0 recensioni, annuncio da commerciante a prezzo di mercato, annuncio non pertinente."
+        "ai_context_prompt": "MISSIONE: Identificare monete d'oro ufficiali (Marengo, Sterline, Vreneli, etc.) vendute da privati inesperti a un prezzo significativamente inferiore al loro valore intrinseco. Massima allerta per le truffe."
+        "--- PROTOCOLLO CACCIA AL TESORO D'ORO ---"
+        "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che l'annuncio sia per una MONETA D'ORO. Se mostra lingotti, gioielli, medaglie o monete placcate, assegna immediatamente un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'."
+        "1. **Analisi del Venditore (Critico per le Truffe!)**: La combinazione di un oggetto di alto valore e un venditore nuovo è il più grande segnale di allarme. Un venditore con 0-10 recensioni che vende una moneta d'oro è da considerare estremamente rischioso. La massima fiducia va a venditori con poche recensioni (< 50) che usano un linguaggio da \"eredità\"."
+        "2. **Analisi del Prezzo (Formula dell'Affare)**: L'oro vale circa 95€/grammo. Stiamo cercando un prezzo target inferiore a 75€/grammo. Un Marengo (circa 5.8g di oro puro) dovrebbe valere ~550€. Un affare eccezionale è sotto i 450€. Usa questa logica: se il prezzo è troppo basso per essere vero (es. 100€ per un Marengo), è una truffa al 99%. Se è basso ma plausibile (350-450€), è il nostro target."
+        "3. **Indicatore Testuale dell'Inesperienza**: Cerca attivamente parole come \"nonno\", \"eredità\", \"trovata in un cassetto\", \"non me ne intendo\". Questa è la giustificazione più forte per un prezzo basso e un annuncio legittimo."
+        "--- PUNTEGGIO (SOLO AFFARI VERI) ---"
+        "- **Punteggio 9-10 (JACKPOT)**: Annuncio con testo che indica chiaramente ignoranza (\"moneta del nonno\") E prezzo plausibilmente basso (es. 350-450€ per un Marengo) E un venditore con un numero di recensioni basso ma non nullo (es. 5-30 recensioni)."
+        "- **Punteggio 7-8 (Affare Potenziale)**: Prezzo basso ma venditore con molte recensioni (potrebbe essere un professionista che svende) o testo vago. Richiede attenzione."
+        "- **Punteggio 1-6 (Da Scartare)**: Prezzo troppo basso per essere vero, venditore con 0 recensioni, annuncio da commerciante a prezzo di mercato, annuncio non pertinente."
     },
     {
         "expertise_name": "Argento Italiano (al Peso)",
@@ -117,7 +117,15 @@ SEARCH_TARGETS = [
             "caravelle argento",
             "argento commemorativo"
         ],
-        "ai_context_prompt": "MISSIONE: Acquistare monete d'argento della Repubblica Italiana a un prezzo uguale o INFERIORE al solo valore del metallo. È una pura operazione finanziaria.\n--- PROTOCOLLO CACCIA ALL'AFFARE ---\n0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che l'annuncio riguardi ESCLUSIVAMENTE monete o banconote. Se l'immagine o la descrizione mostrano gioielli, medaglie, posate, lingotti o altri oggetti in argento, assegna immediatamente un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'.\n1. **Analisi del Venditore**: Un venditore professionale con molte recensioni difficilmente venderà sotto il valore del metallo. Presta più attenzione agli annunci di venditori con poche recensioni.\n2. **Valore Target**: Il valore dell'argento di una 500 Lire è circa 8-10€. L'annuncio è un affare SOLO se il prezzo è <= 10€.\n--- PUNTEGGIO (SOLO AFFARI VERI) ---\n- **Punteggio 9-10 (Acquisto Immediato)**: Prezzo ≤ 8€.\n- **Punteggio 7-8 (Buon Acquisto)**: Prezzo tra 8€ e 10€.\n- **Sotto il 7**: Qualsiasi prezzo superiore a 10€ o annuncio non pertinente."
+        "ai_context_prompt": "MISSIONE: Acquistare monete d'argento della Repubblica Italiana a un prezzo uguale o INFERIORE al solo valore del metallo. È una pura operazione finanziaria."
+        "--- PROTOCOLLO CACCIA ALL'AFFARE ---"
+        "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che l'annuncio riguardi ESCLUSIVAMENTE monete o banconote. Se l'immagine o la descrizione mostrano gioielli, medaglie, posate, lingotti o altri oggetti in argento, assegna immediatamente un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'."
+        "1. **Analisi del Venditore**: Un venditore professionale con molte recensioni difficilmente venderà sotto il valore del metallo. Presta più attenzione agli annunci di venditori con poche recensioni."
+        "2. **Valore Target**: Il valore dell'argento di una 500 Lire è circa 8-10€. L'annuncio è un affare SOLO se il prezzo è <= 10€."
+        "--- PUNTEGGIO (SOLO AFFARI VERI) ---"
+        "- **Punteggio 9-10 (Acquisto Immediato)**: Prezzo ≤ 8€."
+        "- **Punteggio 7-8 (Buon Acquisto)**: Prezzo tra 8€ e 10€."
+        "- **Sotto il 7**: Qualsiasi prezzo superiore a 10€ o annuncio non pertinente."
     },
     {
         "expertise_name": "Monete Storiche Italiane (Sottocosto)",
@@ -132,7 +140,13 @@ SEARCH_TARGETS = [
             "quadriga",
             "monete antiche"
         ],
-        "ai_context_prompt": "MISSIONE: Trovare monete del Regno d'Italia di alta qualità vendute a un prezzo visibilmente inferiore a quello di mercato.\n--- PROTOCOLLO CACCIA ALL'AFFARE ---\n0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che l'annuncio riguardi ESCLUSIVAMENTE monete o banconote. Se vedi medaglie militari, gettoni, o altri oggetti storici non monetari, assegna un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'.\n1. **Analisi del Venditore**: Un venditore con molte recensioni e molti articoli simili è un professionista. La probabilità di un affare è bassa. Un venditore con poche recensioni è un target migliore.\n2. **Qualità vs Prezzo**: Cerca l'anomalia: una moneta di alta qualità visibile in foto ma con un prezzo da moneta comune.\n--- PUNTEGGIO (SOLO AFFARI VERI) ---\n- **Punteggio 7-10**: SOLO per monete pertinenti, di alta conservazione e a un prezzo da affare. Ignora gli annunci a prezzo \"giusto\" di venditori professionali."
+        "ai_context_prompt": "MISSIONE: Trovare monete del Regno d'Italia di alta qualità vendute a un prezzo visibilmente inferiore a quello di mercato."
+        "--- PROTOCOLLO CACCIA ALL'AFFARE ---"
+        "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che l'annuncio riguardi ESCLUSIVAMENTE monete o banconote. Se vedi medaglie militari, gettoni, o altri oggetti storici non monetari, assegna un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'."
+        "1. **Analisi del Venditore**: Un venditore con molte recensioni e molti articoli simili è un professionista. La probabilità di un affare è bassa. Un venditore con poche recensioni è un target migliore."
+        "2. **Qualità vs Prezzo**: Cerca l'anomalia: una moneta di alta qualità visibile in foto ma con un prezzo da moneta comune."
+        "--- PUNTEGGIO (SOLO AFFARI VERI) ---"
+        "- **Punteggio 7-10**: SOLO per monete pertinenti, di alta conservazione e a un prezzo da affare. Ignora gli annunci a prezzo \"giusto\" di venditori professionali."
     },
     {
         "expertise_name": "Eurodivisionali (Prezzo Errore)",
@@ -144,7 +158,13 @@ SEARCH_TARGETS = [
             "fondo specchio",
             "2 euro commemorativi"
         ],
-        "ai_context_prompt": "MISSIONE: Identificare set della Zecca (divisionali, proof) venduti a un prezzo che non tiene conto del loro valore collezionistico.\n--- PROTOCOLLO CACCIA ALL'AFFARE ---\n0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che si tratti di monete a corso legale. Se l'annuncio mostra medaglie-souvenir, gettoni o altre \"monete\" non ufficiali, assegna un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'.\n1. **Analisi del Venditore**: Un venditore con poche recensioni che vende una divisionale a 20€ è molto più interessante di un negozio.\n2. **Cerca la Confezione**: L'affare si trova quasi sempre su prodotti in confezione ufficiale della Zecca.\n--- PUNTEGGIO (SOLO AFFARI VERI) ---\n- **Punteggio 7-10**: SOLO se il prezzo è palesemente inferiore al valore di mercato standard per quel set, preferibilmente da un venditore con poche recensioni."
+        "ai_context_prompt": "MISSIONE: Identificare set della Zecca (divisionali, proof) venduti a un prezzo che non tiene conto del loro valore collezionistico."
+        "--- PROTOCOLLO CACCIA ALL'AFFARE ---"
+        "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che si tratti di monete a corso legale. Se l'annuncio mostra medaglie-souvenir, gettoni o altre \"monete\" non ufficiali, assegna un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'."
+        "1. **Analisi del Venditore**: Un venditore con poche recensioni che vende una divisionale a 20€ è molto più interessante di un negozio."
+        "2. **Cerca la Confezione**: L'affare si trova quasi sempre su prodotti in confezione ufficiale della Zecca."
+        "--- PUNTEGGIO (SOLO AFFARI VERI) ---"
+        "- **Punteggio 7-10**: SOLO se il prezzo è palesemente inferiore al valore di mercato standard per quel set, preferibilmente da un venditore con poche recensioni."
     },
     {
         "expertise_name": "Monete d'Oro/Argento (Investimento Sotto Quotazione)",
@@ -157,7 +177,13 @@ SEARCH_TARGETS = [
             "Morgan dollar",
             "sterlina oro"
         ],
-        "ai_context_prompt": "MISSIONE: Trovare monete da investimento (Oro/Argento) vendute da privati a un prezzo INFERIORE alla quotazione spot del metallo. Massima allerta per le truffe.\n--- PROTOCOLLO CACCIA ALL'AFFARE ---\n0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: L'annuncio deve riguardare una MONETA ufficiale. Se l'oggetto è un lingotto, una medaglia, un gioiello o un dente d'oro, assegna un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'.\n1. **Analisi del Venditore (Critico!)**: Un venditore con 0 recensioni è un RED FLAG. L'affidabilità (>50 recensioni) è un requisito non negoziabile.\n2. **Autenticità SOPRA OGNI COSA**: Il minimo dubbio sull'autenticità (foto, descrizione) e l'annuncio va scartato.\n--- PUNTEGGIO (SOLO AFFARI VERI) ---\n- **Punteggio 7-10**: SOLO se l'annuncio è pertinente, il venditore è affidabile E il prezzo è sotto la quotazione del metallo."
+        "ai_context_prompt": "MISSIONE: Trovare monete da investimento (Oro/Argento) vendute da privati a un prezzo INFERIORE alla quotazione spot del metallo. Massima allerta per le truffe."
+        "--- PROTOCOLLO CACCIA ALL'AFFARE ---"
+        "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: L'annuncio deve riguardare una MONETA ufficiale. Se l'oggetto è un lingotto, una medaglia, un gioiello o un dente d'oro, assegna un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'."
+        "1. **Analisi del Venditore (Critico!)**: Un venditore con 0 recensioni è un RED FLAG. L'affidabilità (>50 recensioni) è un requisito non negoziabile."
+        "2. **Autenticità SOPRA OGNI COSA**: Il minimo dubbio sull'autenticità (foto, descrizione) e l'annuncio va scartato."
+        "--- PUNTEGGIO (SOLO AFFARI VERI) ---"
+        "- **Punteggio 7-10**: SOLO se l'annuncio è pertinente, il venditore è affidabile E il prezzo è sotto la quotazione del metallo."
     },
     {
         "expertise_name": "Banconote FDS (Sottovalutate)",
@@ -168,7 +194,13 @@ SEARCH_TARGETS = [
             "banconote lire",
             "vecchie banconote fds"
         ],
-        "ai_context_prompt": "MISSIONE: Trovare lotti o singole banconote in condizioni perfette (Fior di Stampa, FDS) vendute al prezzo di banconote circolate.\n--- PROTOCOLLO CACCIA ALL'AFFARE ---\n0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: L'annuncio deve essere per banconote. Se l'immagine mostra monete, assegni, francobolli o altro, assegna un punteggio di 1 e scrivi 'Annuncio non pertinente'.\n1. **Analisi del Venditore**: Un venditore non specializzato con poche recensioni ha più probabilità di sottovalutare una banconota FDS.\n2. **Cerca \"FDS\"**: La parola chiave \"FDS\" o \"Fior di Stampa\" è fondamentale.\n--- PUNTEGGIO (SOLO AFFARI VERI) ---\n- **Punteggio 7-10**: SOLO per banconote pertinenti, descritte e mostrate come FDS, ma con un prezzo da banconota usata."
+        "ai_context_prompt": "MISSIONE: Trovare lotti o singole banconote in condizioni perfette (Fior di Stampa, FDS) vendute al prezzo di banconote circolate."
+        "--- PROTOCOLLO CACCIA ALL'AFFARE ---"
+        "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: L'annuncio deve essere per banconote. Se l'immagine mostra monete, assegni, francobolli o altro, assegna un punteggio di 1 e scrivi 'Annuncio non pertinente'."
+        "1. **Analisi del Venditore**: Un venditore non specializzato con poche recensioni ha più probabilità di sottovalutare una banconota FDS."
+        "2. **Cerca \"FDS\"**: La parola chiave \"FDS\" o \"Fior di Stampa\" è fondamentale."
+        "--- PUNTEGGIO (SOLO AFFARI VERI) ---"
+        "- **Punteggio 7-10**: SOLO per banconote pertinenti, descritte e mostrate come FDS, ma con un prezzo da banconota usata."
     },
     {
         "expertise_name": "Accessori (Lotti o Stock)",
@@ -180,7 +212,13 @@ SEARCH_TARGETS = [
             "raccoglitore monete",
             "lotto vassoi monete"
         ],
-        "ai_context_prompt": "MISSIONE: Trovare lotti di accessori per collezionismo (album, raccoglitori, vassoi) venduti in blocco a un prezzo stracciato, tipicamente per cessato hobby.\n--- PROTOCOLLO CACCIA ALL'AFFARE ---\n0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che l'annuncio riguardi accessori VUOTI. Se gli album o i raccoglitori contengono monete, l'annuncio appartiene a un'altra categoria di ricerca. In tal caso, assegna punteggio 1 e scrivi 'Annuncio non pertinente (contiene monete)'.\n1. **Analisi del Venditore**: Un venditore con poche recensioni che vende \"tutto insieme\" è il target ideale.\n2. **Quantità**: Cerca le parole \"lotto\", \"stock\", \"cessato hobby\".\n--- PUNTEGGIO (SOLO AFFARI VERI) ---\n- **Punteggio 7-10**: SOLO per lotti di accessori vuoti a un prezzo chiaramente da \"svuota tutto\"."
+        "ai_context_prompt": "MISSIONE: Trovare lotti di accessori per collezionismo (album, raccoglitori, vassoi) venduti in blocco a un prezzo stracciato, tipicamente per cessato hobby."
+        "--- PROTOCOLLO CACCIA ALL'AFFARE ---"
+        "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che l'annuncio riguardi accessori VUOTI. Se gli album o i raccoglitori contengono monete, l'annuncio appartiene a un'altra categoria di ricerca. In tal caso, assegna punteggio 1 e scrivi 'Annuncio non pertinente (contiene monete)'."
+        "1. **Analisi del Venditore**: Un venditore con poche recensioni che vende \"tutto insieme\" è il target ideale."
+        "2. **Quantità**: Cerca le parole \"lotto\", \"stock\", \"cessato hobby\"."
+        "--- PUNTEGGIO (SOLO AFFARI VERI) ---"
+        "- **Punteggio 7-10**: SOLO per lotti di accessori vuoti a un prezzo chiaramente da \"svuota tutto\"."
     },
     {
         "expertise_name": "Omega Nascosti (Eredità)",
@@ -193,7 +231,14 @@ SEARCH_TARGETS = [
             "vecchio orologio omega",
             "lotto orologi"
         ],
-        "ai_context_prompt": "MISSIONE: Individuare orologi Omega di lusso venduti da persone totalmente ignare del loro valore a un prezzo ridicolmente basso.\n--- PROTOCOLLO DI RILEVAMENTO ANOMALIE ---\n0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: L'annuncio deve mostrare un orologio da polso. Se mostra orologi da tasca, da parete, o gioielli, assegna punteggio 1 e scrivi 'Annuncio non pertinente'.\n1. **Analisi del Venditore (Critico!)**: Il venditore DEVE avere poche recensioni (<20). Se ha molte recensioni, è una truffa al 99%. Scarta.\n2. **Anomalia Prezzo/Testo**: Cerca un prezzo molto basso (< 1000€) e un testo che indica ignoranza totale (\"orologio del nonno\").\n3. **Identificazione Visiva**: Devi riconoscere un Omega (Speedmaster/Seamaster) dalla foto.\n--- PUNTEGGIO (CACCIA AL TESORO) ---\n- **Punteggio 7-10 (JACKPOT POTENZIALE)**: SOLO se è un orologio da polso, il venditore ha poche recensioni, il testo indica ignoranza E la foto mostra un Omega riconoscibile."
+        "ai_context_prompt": "MISSIONE: Individuare orologi Omega di lusso venduti da persone totalmente ignare del loro valore a un prezzo ridicolmente basso."
+        "--- PROTOCOLLO DI RILEVAMENTO ANOMALIE ---"
+        "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: L'annuncio deve mostrare un orologio da polso. Se mostra orologi da tasca, da parete, o gioielli, assegna punteggio 1 e scrivi 'Annuncio non pertinente'."
+        "1. **Analisi del Venditore (Critico!)**: Il venditore DEVE avere poche recensioni (<20). Se ha molte recensioni, è una truffa al 99%. Scarta."
+        "2. **Anomalia Prezzo/Testo**: Cerca un prezzo molto basso (< 1000€) e un testo che indica ignoranza totale (\"orologio del nonno\")."
+        "3. **Identificazione Visiva**: Devi riconoscere un Omega (Speedmaster/Seamaster) dalla foto."
+        "--- PUNTEGGIO (CACCIA AL TESORO) ---"
+        "- **Punteggio 7-10 (JACKPOT POTENZIALE)**: SOLO se è un orologio da polso, il venditore ha poche recensioni, il testo indica ignoranza E la foto mostra un Omega riconoscibile."
     },
     {
         "expertise_name": "Orologi Omega (Mercato Standard)",
@@ -204,6 +249,12 @@ SEARCH_TARGETS = [
             "omega speedmaster",
             "omega seamaster"
         ],
-        "ai_context_prompt": "MISSIONE: Trovare un Omega autentico a un buon prezzo da un venditore affidabile nel mercato standard.\n--- PROTOCOLLO DI VERIFICA ---\n0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: L'annuncio deve essere per un orologio Omega. Se l'annuncio principale è per un altro marchio o per accessori (cinturini, scatole vuote), assegna punteggio 1 e scrivi 'Annuncio non pertinente'.\n1. **Analisi del Venditore (Critico!)**: Il venditore DEVE essere affidabile (>50 recensioni). Un venditore con 0 recensioni è un red flag.\n2. **Priorità: Autenticità**. Il corredo completo (\"full set\") è il più grande segnale di fiducia.\n--- PUNTEGGIO (MERCATO STANDARD) ---\n- **Punteggio 7-10 (Buon Affare Verificato)**: Prezzo competitivo E forti indicatori di fiducia (venditore affidabile, corredo, foto chiare)."
+        "ai_context_prompt": "MISSIONE: Trovare un Omega autentico a un buon prezzo da un venditore affidabile nel mercato standard."
+        "--- PROTOCOLLO DI VERIFICA ---"
+        "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: L'annuncio deve essere per un orologio Omega. Se l'annuncio principale è per un altro marchio o per accessori (cinturini, scatole vuote), assegna punteggio 1 e scrivi 'Annuncio non pertinente'."
+        "1. **Analisi del Venditore (Critico!)**: Il venditore DEVE essere affidabile (>50 recensioni). Un venditore con 0 recensioni è un red flag."
+        "2. **Priorità: Autenticità**. Il corredo completo (\"full set\") è il più grande segnale di fiducia."
+        "--- PUNTEGGIO (MERCATO STANDARD) ---"
+        "- **Punteggio 7-10 (Buon Affare Verificato)**: Prezzo competitivo E forti indicatori di fiducia (venditore affidabile, corredo, foto chiare)."
     }
 ]
