@@ -5,7 +5,7 @@ from config import OPENAI_KEY, TRIAGE_AI_PROMPT
 # Crea un'istanza del client OpenAI che verrà riutilizzata per tutte le chiamate
 client = OpenAI(api_key=OPENAI_KEY)
 AI_MODEL = "gpt-5-mini"
-TRIAGE_TOKENS = 500
+TRIAGE_TOKENS = 800
 COMPLETE_ANALYSIS_TOKENS = 2000
 
 # ------------------------------------------------

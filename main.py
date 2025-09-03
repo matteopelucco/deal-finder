@@ -88,7 +88,7 @@ async def main_loop():
                     annunci_da_considerare = risultati_scraper[:MAX_ANNUNCI_DA_CONSIDERARE]
                     print(f"[INFO] Trovati {len(risultati_scraper)} annunci, ne considero i primi {len(annunci_da_considerare)}.")
 
-                    for annuncio in annunci_da_considerare:
+                    for i, annuncio in annunci_da_considerare:
                         
                         price = annuncio['price']
                         link = annuncio['link']
@@ -96,7 +96,7 @@ async def main_loop():
                         img_url = annuncio['img_url']
                         url = annuncio['url']
 
-                        print(f"Annuncio in analisi: ({title}) - {url}")
+                        print(f"[INFO] Annuncio {i}/{len(annunci_da_considerare)}: {title} -> {url}")
                         
                         # Filtro per prezzo minimo, specifico per questo target
                         if price <= min_price :
