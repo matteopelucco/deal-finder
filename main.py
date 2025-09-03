@@ -82,45 +82,50 @@ async def main_loop():
 
                 # --- CICLO INTERNO SUI TERMINI DI RICERCA DI QUESTA EXPERTISE ---
                 for term in search_terms:
-                    print(f"  -> Ricerca per il termine: '{term}' per Expertise '{expertise_name}' - (Catalogo: {catalog_id})")
+                    print(f"[INFO] Ricerca per il termine: '{term}' per Expertise '{expertise_name}' - (Catalogo: {catalog_id})")
                     
                     risultati_scraper = scrap_vinted(term, catalog_id)
                     annunci_da_considerare = risultati_scraper[:MAX_ANNUNCI_DA_CONSIDERARE]
-                    print(f"     Trovati {len(risultati_scraper)} annunci, ne considero i primi {len(annunci_da_considerare)}.")
+                    print(f"[INFO] Trovati {len(risultati_scraper)} annunci, ne considero i primi {len(annunci_da_considerare)}.")
 
                     for annuncio in annunci_da_considerare:
                         
-                        # Filtro per annunci già analizzati in passato
+                        price = annuncio['price']
                         link = annuncio['link']
+                        title = annuncio['title']
+                        img_url = annuncio['img_url']
+                        url = annuncio['url']
+
+                        print(f"Annuncio in analisi: ({title}) - {url}")
                         
                         # Filtro per prezzo minimo, specifico per questo target
-                        if annuncio['price'] <= min_price :
-                            print(f"Annuncio scartato, prezzo inferiore al prezzo minimo impostato ({min_price})")
+                        if price <= min_price :
+                            print(f"[INFO] Annuncio scartato, prezzo ({price}) inferiore al prezzo minimo impostato ({min_price})")
                             motivazione_scarto = f"Prezzo ({annuncio['price']:.2f}€) <= Soglia Minima ({min_price:.2f}€)"
                             log_scarto("scarti_prezzo_basso.txt", link, motivazione_scarto)
                             continue
 
-                        if annuncio['price'] >= max_price:
-                            print(f"Annuncio scartato, prezzo superiore al prezzo massimo impostato ({max_price})")
+                        if price >= max_price:
+                            print(f"[INFO] Annuncio scartato, prezzo ({price}) superiore al prezzo massimo impostato ({max_price})")
                             motivazione_scarto = f"Prezzo ({annuncio['price']:.2f}€) > Soglia Massima ({max_price:.2f}€)"
                             log_scarto("scarti_prezzo_alto.txt", link, motivazione_scarto)
                             continue
 
                         if link in annunci_gia_analizzati_set:
-                            print(f"Annuncio scartato in quanto già analizzato in passato")
+                            print(f"[INFO] Annuncio scartato in quanto già analizzato in passato")
                             continue
 
-                        print(f" -> Nuovo annuncio! Analizzo: {annuncio['title']}")
+                        print(f"[INFO] Annuncio idoneo al triage, procedo.. ")
 
                         # --- PASSAGGIO 1: ANALISI DI TRIAGE ---
                         risultato_triage = doTriage(
-                            annuncio['title'],
-                            annuncio['price'],
-                            annuncio['img_url']
+                            title,
+                            price,
+                            img_url
                         )
 
                         if risultato_triage['continua_analisi']:
-                            print(f"           -> TRIAGE SUPERATO. Eseguo analisi approfondita...")
+                            print(f"[INFO] TRIAGE SUPERATO. Eseguo analisi approfondita...")
                             
                             # --- PASSAGGIO 2: ANALISI APPROFONDITA (SOLO SE NECESSARIO) ---
                             # --- Ora riceviamo un dizionario di dettagli ---
@@ -128,21 +133,21 @@ async def main_loop():
                         
                             # LOGGING DI DEBUG PER INPUT AI
                             print("\n" + "="*25 + " DEBUG: INPUT PER OPENAI " + "="*25)
-                            print(f"           - Titolo: {annuncio['title']}")
-                            print(f"           - Prezzo: {annuncio['price']:.2f} €")
-                            print(f"           - Descrizione: {dettagli_annuncio['description'][:200]}...") 
-                            print(f"           - Img URL: {annuncio['img_url']}")
-                            print(f"           - URL: {annuncio['url']}")
-                            print(f"           - Vendor username: {dettagli_annuncio['vendor_username']}")
-                            print(f"           - Vendor reviews: {dettagli_annuncio['vendor_reviews_count']}")
+                            print(f" - Titolo: {title}")
+                            print(f" - Prezzo: {price:.2f} €")
+                            print(f" - Descrizione: {dettagli_annuncio['description'][:200]}...") 
+                            print(f" - Img URL: {img_url}")
+                            print(f" - URL: {annuncio['url']}")
+                            print(f" - Vendor username: {dettagli_annuncio['vendor_username']}")
+                            print(f" - Vendor reviews: {dettagli_annuncio['vendor_reviews_count']}")
                             print("="*75)
 
                             # Chiamata unificata alla funzione di analisi olistica
                             analisi_complessiva = doCompleteArticleAnalysis(
-                                annuncio['title'], 
+                                title, 
                                 dettagli_annuncio['description'], 
-                                annuncio['price'],
-                                annuncio['img_url'],
+                                price,
+                                img_url,
                                 ai_context,
                                 dettagli_annuncio['vendor_username'],
                                 dettagli_annuncio['vendor_reviews_count']
