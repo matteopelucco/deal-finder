@@ -88,7 +88,7 @@ async def main_loop():
                     annunci_da_considerare = risultati_scraper[:MAX_ANNUNCI_DA_CONSIDERARE]
                     print(f"[INFO] Trovati {len(risultati_scraper)} annunci, ne considero i primi {len(annunci_da_considerare)}.")
 
-                    for i, annuncio in annunci_da_considerare:
+                    for i, annuncio in enumerate(annunci_da_considerare, start=1):
                         
                         price = annuncio['price']
                         link = annuncio['link']
@@ -100,22 +100,22 @@ async def main_loop():
                         
                         # Filtro per prezzo minimo, specifico per questo target
                         if price <= min_price :
-                            print(f"[INFO] Annuncio scartato, prezzo ({price}) inferiore al prezzo minimo impostato ({min_price})")
+                            print(f"[INFO] -> Annuncio scartato, prezzo ({price}) inferiore al prezzo minimo impostato ({min_price})")
                             motivazione_scarto = f"Prezzo ({annuncio['price']:.2f}€) <= Soglia Minima ({min_price:.2f}€)"
                             log_scarto("scarti_prezzo_basso.txt", link, motivazione_scarto)
                             continue
 
                         if price >= max_price:
-                            print(f"[INFO] Annuncio scartato, prezzo ({price}) superiore al prezzo massimo impostato ({max_price})")
+                            print(f"[INFO] -> Annuncio scartato, prezzo ({price}) superiore al prezzo massimo impostato ({max_price})")
                             motivazione_scarto = f"Prezzo ({annuncio['price']:.2f}€) > Soglia Massima ({max_price:.2f}€)"
                             log_scarto("scarti_prezzo_alto.txt", link, motivazione_scarto)
                             continue
 
                         if link in annunci_gia_analizzati_set:
-                            print(f"[INFO] Annuncio scartato in quanto già analizzato in passato")
+                            print(f"[INFO] -> Annuncio scartato in quanto già analizzato in passato")
                             continue
 
-                        print(f"[INFO] Annuncio idoneo al triage, procedo.. ")
+                        print(f"[INFO] -> Annuncio idoneo al triage, procedo.. ")
 
                         # --- PASSAGGIO 1: ANALISI DI TRIAGE ---
                         risultato_triage = doTriage(
@@ -199,14 +199,14 @@ async def main_loop():
                             print(f"           -> TRIAGE FALLITO. Annuncio scartato senza analisi approfondita.")
 
                     # Pausa tra un termine di ricerca e l'altro
-                    print(f"Pausa tattica di {INTERVALLO_INTRA_TERMS} secondi prima del prossimo termine di ricerca")
+                    print(f"[INFO] Pausa tattica di {INTERVALLO_INTRA_TERMS} secondi prima del prossimo termine di ricerca")
 
                     await asyncio.sleep(INTERVALLO_INTRA_TERMS) 
             
             print("\n--- Scansione di tutti i target completata. In attesa del prossimo ciclo orario. ---")
 
         else:
-            print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Pausa notturna...")
+            print(f"[INFO] [{datetime.datetime.now().strftime('%H:%M:%S')}] Pausa notturna...")
 
         await asyncio.sleep(INTERVALLO_INTERO_CICLO)
 
