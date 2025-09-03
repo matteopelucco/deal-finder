@@ -18,7 +18,7 @@ INTERVALLO_INTERO_CICLO = 600
 MAX_ANNUNCI_DA_CONSIDERARE = 20
 
 # Numero massimo di file da conservare nella memoria persistita
-MAX_HISTORY_SIZE = 400  # -> Dimensione massima della nostra cronologia
+MAX_HISTORY_SIZE = 2000
 
 # Timeout in secondi per le richieste web dello scraper.
 SCRAPER_TIMEOUT_SECONDS = 20
