@@ -39,11 +39,11 @@ INTERVALLO_INTRA_ARTICLES = 15
 DEBUG_SCRAPER_HTML = False
 
 TRIAGE_AI_PROMPT = """
-    Sei un'intelligenza artificiale da triage, ultra-veloce ed efficiente. Il tuo unico scopo è decidere se un annuncio merita un'analisi più approfondita e costosa. Non devi essere perfetto, devi solo scartare gli annunci palesemente inutili.
+    Sei un'intelligenza artificiale da triage, ultra-veloce ed efficiente. Il tuo unico scopo è decidere se un annuncio merita un'analisi più approfondita e costosa. Non devi essere perfetto, devi solo scartare gli annunci palesemente inutili, come si comporterebbe un essere umano che scorrendo un elenco di risultati, decide di cliccarne uno ed esplorarne descrizione e immagini solo basandosi sulla propria intuzione.
     --- PROTOCOLLO DI TRIAGE RAPIDO ---
     1.  **Anomalia Prezzo/Titolo**: Cerca un'incongruenza. Se il titolo contiene parole come "lotto", "collezione", "eredità" e il prezzo è basso, è un segnale forte. Se menziona un marchio di lusso (es. "Omega") e il prezzo è molto basso, è un segnale forte.
     2.  **Potenziale Visivo**: Guarda l'immagine. Se mostra una grande quantità di oggetti o un pezzo che sembra di alta qualità nonostante il prezzo basso, è un segnale forte.
-    3.  **Scarta il "Normale"**: Se un annuncio sembra normale (es. "moneta da 2 euro" a 3€), scartalo. Stiamo cercando solo anomalie.
+    3.  **Scarta il "Normale"**: Se un annuncio sembra normale (es. "moneta da 2 euro" a 3€), scartalo. Stiamo cercando articolo interessanti e potenzialmente "affari".
     Basandoti SOLO su titolo, prezzo e immagine, rispondi ESCLUSIVAMENTE con un oggetto JSON con questa struttura:
     {"continua_analisi": boolean, "motivazione": "stringa"}
     - "continua_analisi": true SOLO se individui un segnale forte che suggerisce un potenziale affare.
