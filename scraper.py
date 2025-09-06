@@ -2,6 +2,12 @@ import requests, os, datetime
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import re 
+import logging
+from log_utils.helper import LogHelper
+
+logger = logging.getLogger()
+logger.addHandler(LogHelper.generate_color_handler())
+logger.setLevel(logging.INFO)
 
 # Import delle costanti di configurazione necessarie
 from config import SCRAPER_TIMEOUT_SECONDS, DEBUG_SCRAPER_HTML
@@ -56,7 +62,7 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
     # Headers per simulare un browser e ridurre la probabilità di essere bloccati
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
 
-    print(f"DEBUG: Scraping URL -> ", url)
+    logger.info(f"Scraping URL -> ", url)
 
     try:
         response = requests.get(url, headers=headers, timeout=SCRAPER_TIMEOUT_SECONDS)
@@ -78,12 +84,12 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
                 # Salva il contenuto HTML grezzo nel file
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(response.text)
-                print(f"DEBUG: HTML della ricerca salvato in '{file_path}'")
+                logger.warning(f"HTML della ricerca salvato in '{file_path}'")
             except Exception as e:
-                print(f"ERROR: Impossibile salvare il file HTML di debug: {e}")
+                logger.error(f"Impossibile salvare il file HTML di debug: {e}")
         # --- FINE LOGICA DI DEBUG ---
     except requests.RequestException as e:
-        print(f"ERROR: Errore durante la richiesta a Vinted per '{term}': {e}")
+        logger.error(f"Errore durante la richiesta a Vinted per '{term}': {e}")
         return []
 
     soup = BeautifulSoup(response.content, "html.parser")
@@ -93,7 +99,7 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
     items = soup.select(VINTED_SELECTORS["search_results"]["item_card"])
     
     if not items:
-        print(f"INFO: Nessun annuncio trovato per '{term}'. Il selettore '{VINTED_SELECTORS['search_results']['item_card']}' potrebbe essere obsoleto o non ci sono risultati.")
+        logger.info(f"Nessun annuncio trovato per '{term}'. Il selettore '{VINTED_SELECTORS['search_results']['item_card']}' potrebbe essere obsoleto o non ci sono risultati.")
         return []
 
     for item in items:
@@ -172,5 +178,5 @@ def scrap_dettagli_annuncio(url_annuncio: str) -> str:
         }
     
     except Exception as e:
-        print(f"        ERRORE imprevisto durante lo scraping dei dettagli: {e}")
+        logger.error(f"Errore imprevisto durante lo scraping dei dettagli: {e}")
         return default_details
