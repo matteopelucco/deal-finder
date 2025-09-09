@@ -29,6 +29,9 @@ INTERVALLO_INTRA_TERMS = 15
 # Intervallo tra una scansione di un annuncio e la seguente
 INTERVALLO_INTRA_ARTICLES = 15
 
+# Sovrascrivi il turno di notte
+OVERRIDE_NIGHT_SHIFT = True
+
 # ==============================================================================
 # --- MODALITÀ DI DEBUG PER LO SCRAPER ---
 # Se impostato a True, lo scraper salverà l'HTML grezzo di ogni pagina di ricerca 

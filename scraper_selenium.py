@@ -2,8 +2,12 @@ import requests, os, datetime, time
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import re 
+import logging
+from log_utils.helper import LogHelper
 
-
+logger = logging.getLogger()
+logger.addHandler(LogHelper.generate_color_handler())
+logger.setLevel(logging.INFO)
 
 # Importazioni per Selenium
 from selenium import webdriver
@@ -13,19 +17,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-
 # --- CONFIGURAZIONE SELENIUM ---
-# Inserisci qui il percorso dove hai salvato chromedriver.exe
+# percorso per chromedriver.exe
 CHROME_DRIVER_PATH = r'C:\dev\software\selenium\chromedriver-win64\chromedriver.exe'
 
 # Import delle costanti di configurazione necessarie
 from config import SCRAPER_TIMEOUT_SECONDS, DEBUG_SCRAPER_HTML
 
-# ==============================================================================
 # --- CONFIGURAZIONE CENTRALE DEI SELETTORI CSS ---
-# Se Vinted cambia la struttura del suo sito, basterà aggiornare i valori
-# in questo dizionario per far funzionare di nuovo lo scraper.
-# ==============================================================================
 VINTED_SELECTORS = {
     # Selettori per la pagina dei risultati di ricerca (catalogo)
     "search_results": {
@@ -82,7 +81,7 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
     service = Service(CHROME_DRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
     
-    print(f"DEBUG: Scraping URL -> ", url)
+    logger.info(f"Scraping URL -> {url}", url)
 
     try:
         driver.get(url)
@@ -94,13 +93,13 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
             cookie_button.click()
             WebDriverWait(driver, 5).until(EC.invisibility_of_element_located(cookie_button_locator))
         except (TimeoutException, NoSuchElementException):
-            print("        INFO: Nessun banner dei cookie gestito.")
+            logger.warning("Nessun banner dei cookie gestito.")
         # FASE 2: Scroll e Attesa Risultati
         driver.execute_script("window.scrollTo(0, 500);")
         WebDriverWait(driver, SCRAPER_TIMEOUT_SECONDS).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, VINTED_SELECTORS["search_results"]["item_card"]))
         )
-        print(f"    INFO: Griglia dei prodotti trovata per '{term}'. Eseguo il parsing...")
+        logger.info(f"Griglia dei prodotti trovata per '{term}'. Eseguo il parsing...")
         # --- CORREZIONE CHIAVE: PARSING IMMEDIATO ---
         page_html = driver.page_source
 
@@ -120,20 +119,20 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
                 # Salva il contenuto HTML grezzo nel file
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(page_html)
-                print(f"DEBUG: HTML della ricerca salvato in '{file_path}'")
+                logger.info(f"HTML della ricerca salvato in '{file_path}'")
             except Exception as e:
-                print(f"ERROR: Impossibile salvare il file HTML di debug: {e}")
+                logger.error(f"Impossibile salvare il file HTML di debug: {e}")
         # --- FINE LOGICA DI DEBUG ---  
 
         # Parsing con BeautifulSoup
         soup = BeautifulSoup(page_html, 'lxml') # Usiamo il parser lxml che abbiamo confermato funzionare
         item_cards = soup.select(VINTED_SELECTORS["search_results"]["item_card"])
         
-        print(f"DEBUG: found {len(item_cards)} cards")
+        logger.info(f"Sono state trovate {len(item_cards)} cards")
 
         if not item_cards:
             # Questo messaggio ora indica un vero problema di parsing, non di caricamento
-            print(f"ATTENZIONE: Nessun 'item_card' trovato da BeautifulSoup per '{term}' nonostante la griglia fosse presente.")
+            logger.warning(f"Nessun 'item_card' trovato da BeautifulSoup per '{term}' nonostante la griglia fosse presente.")
             driver.quit()
             return []
         
@@ -144,7 +143,7 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
 
             link_element = item.select_one (VINTED_SELECTORS["search_results"]["link"], href=True)
             if not link_element:
-                print(f"ERROR: link non trovato")
+                logger.error(f"link non trovato")
                 continue
             full_link = urljoin(base_url, link_element['href'])
 
@@ -170,7 +169,7 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
         driver.quit()
         return results
     except Exception as e:
-        print(f"ERRORE: Errore grave nel processo di scraping per '{term}'. Errore: {e}")
+        logger.error(f"Errore grave nel processo di scraping per '{term}'. Errore: {e}")
         driver.quit()
         return []
 
@@ -222,5 +221,5 @@ def scrap_dettagli_annuncio(url_annuncio: str) -> str:
         }
     
     except Exception as e:
-        print(f"        ERRORE imprevisto durante lo scraping dei dettagli: {e}")
+        logger.error(f"ERRORE imprevisto durante lo scraping dei dettagli: {e}")
         return default_details

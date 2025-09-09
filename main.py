@@ -10,13 +10,7 @@ logger = logging.getLogger()
 logger.addHandler(LogHelper.generate_color_handler())
 logger.setLevel(logging.INFO)
 
-logger.debug('Sample Message')
-logger.info('Sample Message, generated timestamp: ' + LogHelper.timestamp(with_ms=True))
-logger.warning('Sample Message')
-logger.error('Sample Message')
-logger.critical('Sample Message')
-
-from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_INTERO_CICLO, INTERVALLO_INTRA_ARTICLES, INTERVALLO_INTRA_TERMS
+from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_INTERO_CICLO, INTERVALLO_INTRA_ARTICLES, INTERVALLO_INTRA_TERMS, OVERRIDE_NIGHT_SHIFT
 from scraper_selenium import scrap_vinted, scrap_dettagli_annuncio
 from analyzer import doTriage, doCompleteArticleAnalysis
 from notifier import invia_notifica
@@ -71,7 +65,15 @@ async def main_loop():
         ora_corrente = datetime.datetime.now().hour
         
         # Il bot è attivo solo in questa finestra oraria
-        if 7 <= ora_corrente <= 23:
+
+        min_hour = 7
+        max_hour = 23
+
+        if OVERRIDE_NIGHT_SHIFT: 
+            min_hour = -1
+            max_hour = 25
+
+        if min_hour <= ora_corrente <= max_hour:
             logger.info(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Orario di attività. Inizio nuova scansione...")
             
             # --- CICLO ESTERNO SUI CAMPI DI EXPERTISE ---
