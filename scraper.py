@@ -5,9 +5,7 @@ import re
 import logging
 from log_utils.helper import LogHelper
 
-logger = logging.getLogger()
-logger.addHandler(LogHelper.generate_color_handler())
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Import delle costanti di configurazione necessarie
 from config import SCRAPER_TIMEOUT_SECONDS, DEBUG_SCRAPER_HTML
@@ -62,7 +60,7 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
     # Headers per simulare un browser e ridurre la probabilità di essere bloccati
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
 
-    logger.info(f"Scraping URL -> ", url)
+    logger.info(f"Scraping URL -> {url}")
 
     try:
         response = requests.get(url, headers=headers, timeout=SCRAPER_TIMEOUT_SECONDS)

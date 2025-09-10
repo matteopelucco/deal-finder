@@ -3,8 +3,10 @@ from telegram import Bot
 from telegram.error import TelegramError
 from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Limite di caratteri di Telegram per le didascalie delle foto.
-# Usiamo un valore leggermente inferiore per sicurezza.
 CAPTION_LIMIT = 1020
 
 async def invia_notifica(messaggio: str, link_annuncio: str, img_url: str = None):
@@ -13,7 +15,7 @@ async def invia_notifica(messaggio: str, link_annuncio: str, img_url: str = None
     per preservare sempre il link dell'annuncio.
     """
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        print("ERRORE: Token o Chat ID di Telegram non impostati.")
+        logger.error("Token o Chat ID di Telegram non impostati.")
         return
 
     bot = Bot(token=TELEGRAM_TOKEN)
@@ -23,7 +25,7 @@ async def invia_notifica(messaggio: str, link_annuncio: str, img_url: str = None
     
     try:
         if img_url:
-            # --- LOGICA DI TRONCAMENTO INTELLIGENTE ---
+            # --- LOGICA DI TRONCAMENTO ---
             
             # Calcoliamo lo spazio disponibile per il messaggio, sottraendo la lunghezza del link
             spazio_disponibile = CAPTION_LIMIT - len(link_markdown)
@@ -54,15 +56,15 @@ async def invia_notifica(messaggio: str, link_annuncio: str, img_url: str = None
                 disable_web_page_preview=True
             )
             
-        print(f"Notifica inviata per: {link_annuncio}")
+        logger.info(f"Notifica inviata per: {link_annuncio}")
 
     except TelegramError as e:
         # Se anche dopo il troncamento il messaggio è troppo lungo, potrebbe esserci un altro errore.
-        print(f"Errore durante l'invio della notifica Telegram: {e}")
+        logger.error(f"Errore durante l'invio della notifica Telegram: {e}")
         # --- STRATEGIA DI FALLBACK ---
         # Se l'invio della foto fallisce (magari per caption troppo lunga nonostante i calcoli),
         # proviamo a inviare un messaggio di testo semplice.
-        print("Tentativo di invio come messaggio di testo di fallback...")
+        logger.info("Tentativo di invio come messaggio di testo di fallback...")
         try:
             messaggio_completo = messaggio + link_markdown
             await bot.send_message(
@@ -70,9 +72,9 @@ async def invia_notifica(messaggio: str, link_annuncio: str, img_url: str = None
                 text=f"IMMAGINE: {img_url}\n\n{messaggio_completo}",
                 parse_mode='Markdown'
             )
-            print("Notifica di fallback inviata con successo.")
+            logger.info("Notifica di fallback inviata con successo.")
         except Exception as fallback_e:
-            print(f"Anche l'invio di fallback è fallito: {fallback_e}")
+            logger.error(f"Anche l'invio di fallback è fallito: {fallback_e}")
 
     except Exception as e:
-        print(f"Errore imprevisto nel notifier: {e}")
+        logger.error(f"Errore imprevisto nel notifier: {e}")

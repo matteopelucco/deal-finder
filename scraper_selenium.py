@@ -5,9 +5,7 @@ import re
 import logging
 from log_utils.helper import LogHelper
 
-logger = logging.getLogger()
-logger.addHandler(LogHelper.generate_color_handler())
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Importazioni per Selenium
 from selenium import webdriver
@@ -76,12 +74,16 @@ def scrap_vinted(term: str, vinted_catalog_id: int) -> list:
     options.add_argument("--headless")  # Esegui senza aprire una finestra del browser
     options.add_argument("--log-level=3") # Riduci il logging nel terminale
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+
+    # riduzione rumore su log di DevTools
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+
     # options.add_argument("--start-maximized")
     
     service = Service(CHROME_DRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
     
-    logger.info(f"Scraping URL -> {url}", url)
+    logger.info(f"Scraping URL -> {url}")
 
     try:
         driver.get(url)

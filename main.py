@@ -6,9 +6,9 @@ import json
 import logging
 from log_utils.helper import LogHelper
 
-logger = logging.getLogger()
-logger.addHandler(LogHelper.generate_color_handler())
-logger.setLevel(logging.INFO)
+log_handler = LogHelper.generate_color_handler()
+logging.basicConfig(handlers=[log_handler], level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from config import SEARCH_TARGETS, MAX_HISTORY_SIZE, MAX_ANNUNCI_DA_CONSIDERARE, INTERVALLO_INTERO_CICLO, INTERVALLO_INTRA_ARTICLES, INTERVALLO_INTRA_TERMS, OVERRIDE_NIGHT_SHIFT
 from scraper_selenium import scrap_vinted, scrap_dettagli_annuncio
@@ -85,6 +85,8 @@ async def main_loop():
                 ai_context = target["ai_context_prompt"]
                 search_terms = target["search_terms"]
 
+                triage_prompt_specifico = target["triage_prompt"]
+
                 logger.info(f"--- Inizio Scansione Expertise: '{expertise_name}' ---")
 
                 # --- CICLO INTERNO SUI TERMINI DI RICERCA DI QUESTA EXPERTISE ---
@@ -128,7 +130,8 @@ async def main_loop():
                         risultato_triage = doTriage(
                             title,
                             price,
-                            img_url
+                            img_url, 
+                            triage_prompt_specifico
                         )
 
                         if risultato_triage['continua_analisi']:

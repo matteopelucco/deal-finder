@@ -1,6 +1,7 @@
+
 import json
 from openai import OpenAI
-from config import OPENAI_KEY, TRIAGE_AI_PROMPT
+from config import OPENAI_KEY
 
 # Crea un'istanza del client OpenAI che verrà riutilizzata per tutte le chiamate
 client = OpenAI(api_key=OPENAI_KEY)
@@ -12,10 +13,10 @@ COMPLETE_ANALYSIS_TOKENS = 2000
 # Esegue un'analisi preliminare basasndosi solamente su pochi dati recuperati dalla lista degli elementi
 # Serve prevalementemente per ottimizzare i costi e i tempi OpenAI
 # ------------------------------------------------
-def doTriage(titolo: str, prezzo: float, img_url: str) -> dict:
+def doTriage(titolo: str, prezzo: float, img_url: str, triage_prompt: str) -> dict:
 
     prompt_text = f"""
-    {TRIAGE_AI_PROMPT}
+    {triage_prompt}
 
     --- DATI DA VALUTARE ---
     - Titolo: "{titolo}"
@@ -142,3 +143,4 @@ def doCompleteArticleAnalysis(titolo: str, descrizione: str, prezzo: float, img_
             "motivazione_complessiva": "Analisi AI fallita o non conclusiva.",
             "parole_chiave": []
         }
+
