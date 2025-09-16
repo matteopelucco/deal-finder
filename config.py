@@ -30,7 +30,7 @@ INTERVALLO_INTRA_TERMS = 15
 INTERVALLO_INTRA_ARTICLES = 15
 
 # Sovrascrivi il turno di notte
-OVERRIDE_NIGHT_SHIFT = True
+OVERRIDE_NIGHT_SHIFT = False
 
 # ==============================================================================
 # --- MODALITÀ DI DEBUG PER LO SCRAPER ---
@@ -41,17 +41,6 @@ OVERRIDE_NIGHT_SHIFT = True
 # ==============================================================================
 DEBUG_SCRAPER_HTML = False
 
-TRIAGE_AI_PROMPT = """
-    Sei un'intelligenza artificiale da triage, ultra-veloce ed efficiente. Il tuo unico scopo è decidere se un annuncio merita un'analisi più approfondita e costosa. Non devi essere perfetto, devi solo scartare gli annunci palesemente inutili, come si comporterebbe un essere umano che scorrendo un elenco di risultati, decide di cliccarne uno ed esplorarne descrizione e immagini solo basandosi sulla propria intuzione.
-    --- PROTOCOLLO DI TRIAGE RAPIDO ---
-    1.  **Anomalia Prezzo/Titolo**: Cerca un'incongruenza. Se il titolo contiene parole come "lotto", "collezione", "eredità" e il prezzo è basso, è un segnale forte. Se menziona un marchio di lusso (es. "Omega") e il prezzo è molto basso, è un segnale forte.
-    2.  **Potenziale Visivo**: Guarda l'immagine. Se mostra una grande quantità di oggetti o un pezzo che sembra di alta qualità nonostante il prezzo basso, è un segnale forte.
-    3.  **Scarta il "Normale"**: Se un annuncio sembra poco interessante o con prezzo esagerato (es. "moneta da 2 euro" a 15€), scartalo. Stiamo cercando articolo interessanti e potenzialmente "affari".
-    Basandoti SOLO su titolo, prezzo e immagine, rispondi ESCLUSIVAMENTE con un oggetto JSON con questa struttura:
-    {"continua_analisi": boolean, "motivazione": "stringa"}
-    - "continua_analisi": true SOLO se individui un segnale forte che suggerisce un potenziale affare.
-    - "motivazione": Spiega in 2-5 parole il motivo della tua decisione (es. "prezzo normale", "lotto interessante", "foto non chiara", "sembra un affare").
-"""
 # ==============================================================================
 # --- NUOVA CONFIGURAZIONE ASTRATTA DEI TARGET DI RICERCA ---
 # ==============================================================================
@@ -214,7 +203,7 @@ SEARCH_TARGETS = [
             "MISSIONE: Identificare set della Zecca (divisionali, proof) venduti a un prezzo che non tiene conto del loro valore collezionistico."
             "--- PROTOCOLLO CACCIA ALL'AFFARE ---"
             "0. **VERIFICA PRELIMINARE (OBBLIGATORIA)**: Assicurati che si tratti di monete a corso legale. Se l'annuncio mostra medaglie-souvenir, gettoni o altre \"monete\" non ufficiali, assegna un punteggio di 1 e nella motivazione scrivi 'Annuncio non pertinente'."
-            "1. **Analisi del Venditore**: Un venditore con poche recensioni che vende una divisionale a 15€ è molto più interessante di un negozio."
+            "1. **Analisi del Venditore**: Un venditore con poche recensioni che vende una divisionale a 12€ è molto più interessante di un negozio."
             "2. **Cerca la Confezione**: L'affare si trova quasi sempre su prodotti in confezione ufficiale della Zecca."
             "3. **Offerta**: considera che mediamente in Vinted le offerte dei compratori pari all'80/85%% del valore sono accettate dal venditore. Nella tua valutazione indica se vale la pena tentare un'offerta, scarta invece l'articolo se anche con ll'eventuale offerta, il prezzo è palesemente troppo elevato"
             "--- PUNTEGGIO (SOLO AFFARI VERI) ---"
